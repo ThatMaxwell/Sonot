@@ -13,6 +13,7 @@
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function seeded(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function T(k, fallback) { return window.SonotI18n ? window.SonotI18n.t(k) : fallback; }
 
   /* ======================================================================
      SOUNDTRACK — synthesized live, nothing to download
@@ -170,17 +171,31 @@
       return ev.sort(function (a, b) { return a.t - b.t; });
     },
 
-    enable: function (filmT) {
+    /* getT returns the film's current time. If the browser is still blocking
+       audio, the music starts in sync the moment it gets unlocked. */
+    enable: function (getT) {
       if (!this.ensure()) return false;
-      var ctx = this.ctx;
-      if (ctx.state === 'suspended') ctx.resume();
+      var ctx = this.ctx, self = this;
       this.on = true;
-      this.offset = ctx.currentTime - filmT + .05;
-      this.scheduledTo = filmT;
+      this.getT = getT;
+      this.sync();
       this.master.gain.cancelScheduledValues(ctx.currentTime);
       this.master.gain.setTargetAtTime(.75, ctx.currentTime, .3);
+      if (ctx.state !== 'running') {
+        var p = ctx.resume();
+        if (p && p.then) p.then(function () { self.sync(); if (self.onChange) self.onChange(); });
+      }
       return true;
     },
+
+    sync: function () {
+      if (!this.ctx || !this.getT) return;
+      var t = this.getT();
+      this.offset = this.ctx.currentTime - t + .05;
+      this.scheduledTo = t;
+    },
+
+    blocked: function () { return !!this.ctx && this.on && this.ctx.state !== 'running'; },
 
     disable: function () {
       if (!this.ctx) return;
@@ -190,7 +205,7 @@
     },
 
     tick: function (filmT) {
-      if (!this.on || !this.events) return;
+      if (!this.on || !this.events || this.ctx.state !== 'running') return;
       var horizon = filmT + .3, self = this;
       this.events.forEach(function (e) {
         if (e.t >= self.scheduledTo && e.t < horizon) e.fn(self.offset + e.t);
@@ -199,7 +214,12 @@
     },
 
     pause: function () { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
-    resume: function () { if (this.ctx && this.on) this.ctx.resume(); }
+    resume: function () {
+      var self = this;
+      if (!this.ctx || !this.on) return;
+      var p = this.ctx.resume();
+      if (p && p.then) p.then(function () { self.sync(); });
+    }
   };
 
   /* ======================================================================
@@ -229,12 +249,21 @@
 
       var self = this;
       $('#filmSkip').addEventListener('click', function () { self.finish(); });
-      var snd = $('#filmSound');
-      snd.addEventListener('click', function () {
-        if (Sound.on) { Sound.disable(); } else if (!Sound.enable(self.t)) { return; }
-        snd.setAttribute('aria-pressed', Sound.on ? 'true' : 'false');
-        snd.querySelector('.lbl').textContent = Sound.on ? 'Sound on' : 'Sound off';
-        try { localStorage.setItem('sonot.sound', Sound.on ? '1' : '0'); } catch (e) {}
+      var snd = this.snd = $('#filmSound');
+      var getT = function () { return self.t; };
+      Sound.onChange = function () { self.soundLabel(); };
+      snd.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (Sound.blocked()) { Sound.enable(getT); return; }   // first click just unlocks
+        if (Sound.on) { Sound.disable(); } else if (!Sound.enable(getT)) { return; }
+        self.soundLabel();
+        try { localStorage.setItem('sonot.sound', Sound.on ? '1' : '0'); } catch (e2) {}
+      });
+      // Browsers block audio until the first interaction: any tap, click or key unlocks it
+      ['pointerdown', 'touchend', 'keydown'].forEach(function (type) {
+        document.addEventListener(type, function () {
+          if (self.playing && Sound.blocked()) Sound.enable(getT);
+        }, true);
       });
       document.addEventListener('keydown', function (e) {
         if (!self.playing) return;
@@ -301,21 +330,18 @@
       this.onEnd = onEnd || null;
       this.t = 0; this.playing = true; this.paused = false;
       this.scenes.forEach(function (s) { s.on = false; s.el.classList.remove('on'); });
-      this.typers.forEach(function (ty) { ty.el.textContent = ''; });
+      this.typers[0].text = T('typer', this.typers[0].text);
+      this.typers.forEach(function (ty) { ty.el.textContent = ''; ty.n = -1; });
       el.hidden = false; el.setAttribute('aria-hidden', 'false');
       el.classList.remove('paused');
       document.body.classList.add('film-open');
       requestAnimationFrame(function () { el.classList.add('show'); });
-      // Keep the visitor's sound preference (needs a gesture, so only when replayed by click)
-      var snd = $('#filmSound'), wants = false;
-      try { wants = localStorage.getItem('sonot.sound') === '1'; } catch (e) {}
-      if (wants && navigator.userActivation && navigator.userActivation.isActive && Sound.enable(0)) {
-        snd.setAttribute('aria-pressed', 'true'); snd.querySelector('.lbl').textContent = 'Sound on';
-      } else if (!Sound.on) {
-        snd.setAttribute('aria-pressed', 'false'); snd.querySelector('.lbl').textContent = 'Sound off';
-      } else {
-        Sound.enable(0);
-      }
+      // Sound is on by default unless the visitor muted it before
+      var muted = false;
+      try { muted = localStorage.getItem('sonot.sound') === '0'; } catch (e) {}
+      if (!muted) Sound.enable(function () { return self.t; });
+      this.soundLabel();
+      setTimeout(function () { self.soundLabel(); }, 400);
       this.last = performance.now();
       requestAnimationFrame(function loop(now) {
         if (!self.playing) return;
@@ -325,6 +351,13 @@
         self.render();
         if (self.t >= LENGTH) self.finish(); else requestAnimationFrame(loop);
       });
+    },
+
+    soundLabel: function () {
+      var snd = this.snd, blocked = Sound.blocked();
+      snd.setAttribute('aria-pressed', Sound.on && !blocked ? 'true' : 'false');
+      snd.classList.toggle('needs-tap', blocked);
+      snd.querySelector('.lbl').textContent = blocked ? T('soundTap', 'Tap anywhere for sound') : (Sound.on ? T('soundOn', 'Sound on') : T('soundOff', 'Sound off'));
     },
 
     setPaused: function (p) {
@@ -365,6 +398,11 @@
         self.scenes.forEach(function (s) { s.on = false; s.el.classList.remove('on'); });
       }, 950);
     }
+  };
+
+  /* Called from the language picker's click so the intro can start with sound */
+  Film.unlockAudio = function () {
+    if (Sound.ensure() && Sound.ctx.state !== 'running') Sound.ctx.resume();
   };
 
   window.SonotFilm = Film;

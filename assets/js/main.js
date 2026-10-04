@@ -16,6 +16,10 @@
   function seg(p, a, b) { return clamp((p - a) / (b - a)); }
   function ease(x) { return 1 - Math.pow(1 - x, 3); }
   function easeIO(x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+  var I18n = window.SonotI18n;
+  function T(k) { return I18n ? I18n.t(k) : ''; }
+  if (I18n) I18n.apply(window.__lang || 'en');
+
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
   /* ----------------------------------------------------------------------
@@ -65,16 +69,19 @@
     if (ICONS[k]) el.innerHTML = ICONS[k];
   });
   $$('[data-os-glyph]').forEach(function (el) { el.innerHTML = ICONS[OS]; });
-  $$('[data-dl-label]').forEach(function (el) { el.textContent = 'Download for ' + NAMES[OS]; });
-  $$('[data-dl-version]').forEach(function (el) { el.textContent = CONFIG.version || ''; });
-  $$('[data-dl-req]').forEach(function (el) { el.textContent = (CONFIG.requirements || {})[OS] || ''; });
+  function downloadText() {
+    $$('[data-dl-label]').forEach(function (el) { el.textContent = T('downloadFor').replace('{os}', NAMES[OS]); });
+    $$('[data-dl-version]').forEach(function (el) { el.textContent = T('version') || CONFIG.version || ''; });
+    $$('[data-dl-req]').forEach(function (el) { el.textContent = T('req_' + OS) || (CONFIG.requirements || {})[OS] || ''; });
+  }
+  downloadText();
 
   function wireDownload(a, os) {
     var url = links[os];
     if (url) { a.href = url; return; }
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      toast('Sonot for ' + NAMES[os] + ' is almost here. Downloads open soon ✨');
+      toast(T('soon').replace('{os}', NAMES[os]));
     });
   }
   $$('[data-dl-primary]').forEach(function (a) { wireDownload(a, OS); });
@@ -99,10 +106,6 @@
   window.scrollTo(0, 0);
 
   var params = new URLSearchParams(location.search);
-  // ?reset wipes everything the site remembers (film seen, sound preference)
-  if (params.has('reset')) {
-    try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('sonot.') === 0) localStorage.removeItem(k); }); } catch (e) {}
-  }
   var mode = CONFIG.film || 'first-visit';
   var playFilm = params.has('film') ||
     (!params.has('nofilm') && !reduceMotion && (mode === 'always' || (mode === 'first-visit' && store('sonot.filmSeen') !== '1')));
@@ -146,19 +149,20 @@
   // Manifesto: split into words
   var manifesto = $('[data-words]');
   var words = [];
-  if (manifesto) {
+  function splitManifesto() {
+    if (!manifesto) return;
     manifesto.innerHTML = manifesto.textContent.trim().split(/\s+/).map(function (w) {
-      var hot = /^(Maxwell|built)/.test(w) ? ' hot' : '';
+      var hot = /^(Maxwell|built|criou)/.test(w) ? ' hot' : '';
       return '<span class="w' + hot + '">' + w + '</span>';
     }).join(' ');
     words = $$('.w', manifesto);
   }
+  splitManifesto();
 
   // Desktop showcase
   var screen = $('#screen'), appwin = $('#appwin'), quick = $('#quick'), quickText = $('#quickText');
-  var stream = $('[data-stream]'), streamText = stream ? stream.dataset.stream : '';
+  var stream = $('[data-stream]');
   var notes = $$('.desk-notes p');
-  var QUICK = 'Make this message sound friendlier';
 
   // Phones
   var phones = { l: $('.ph-l'), c: $('.ph-c'), v: $('.ph-v') };
@@ -202,7 +206,7 @@
     setStep(appwin, 's1', p > .29);
     setStep(appwin, 's2', p > .35);
     var sp = seg(p, .36, .55);
-    var n = Math.round(sp * streamText.length);
+    var streamText = T('stream'), n = Math.round(sp * streamText.length);
     if (stream._n !== n) { stream._n = n; stream.textContent = streamText.slice(0, n); }
     setStep(appwin, 's3', p > .56);
     setStep(appwin, 's4', p > .62);
@@ -210,7 +214,7 @@
     var qOn = p > .69;
     quick.classList.toggle('on', qOn);
     screen.classList.toggle('dim', qOn);
-    var qn = Math.round(seg(p, .71, .79) * QUICK.length);
+    var QUICK = T('quick'), qn = Math.round(seg(p, .71, .79) * QUICK.length);
     if (quickText._n !== qn) { quickText._n = qn; quickText.textContent = QUICK.slice(0, qn); }
     quick.classList.toggle('res', p > .82);
 
@@ -401,20 +405,15 @@
     wave.innerHTML = bars;
   }
 
-  var TONES = [
-    'Hey! Just checking in on the draft — no rush, whenever you get a sec. 😊',
-    'Good afternoon. I wanted to follow up on the status of the draft at your convenience.',
-    'Draft status? Need it Friday. Go. 🚀'
-  ];
   var toneTabs = $$('.tone-tabs span'), toneOut = $('#toneOut'), toneI = 0;
   function setTone(i) {
     toneI = i;
     toneTabs.forEach(function (t, j) { t.classList.toggle('on', j === i); });
     toneOut.classList.add('swap');
-    setTimeout(function () { toneOut.textContent = TONES[i]; toneOut.classList.remove('swap'); }, 280);
+    setTimeout(function () { toneOut.textContent = T('tones')[i]; toneOut.classList.remove('swap'); }, 280);
   }
   toneTabs.forEach(function (t, j) { t.style.cursor = 'pointer'; t.addEventListener('click', function () { setTone(j); }); });
-  setInterval(function () { if (!document.hidden) setTone((toneI + 1) % TONES.length); }, 3200);
+  setInterval(function () { if (!document.hidden) setTone((toneI + 1) % 3); }, 3200);
 
   function countUp(el) {
     if (!el) return;
@@ -429,40 +428,8 @@
   /* ----------------------------------------------------------------------
      10. "Ask it something hard" — scripted streaming preview
      ---------------------------------------------------------------------- */
-  var ANSWERS = [
-    {
-      q: 'Why is the sky blue but sunsets orange?',
-      ms: 'Thought for 2s',
-      a: '<p>Sunlight carries every colour. When it hits air molecules, <b>short blue wavelengths scatter far more</b> than long red ones (roughly 5–6× more). That effect is called <b>Rayleigh scattering</b>.</p>' +
-         '<ul><li><b>Midday:</b> light takes a short path through the air, so scattered blue reaches your eyes from every direction.</li>' +
-         '<li><b>Sunset:</b> light crosses up to ~40× more atmosphere. Most of the blue is scattered away before it reaches you, leaving oranges and reds.</li></ul>' +
-         '<p>Bonus: the sky isn\'t violet because your eyes are less sensitive to violet, and some of it is absorbed high up. 🌅</p>'
-    },
-    {
-      q: 'Write a haiku about Mondays',
-      ms: 'Thought for 1s',
-      a: '<p class="haiku">Alarm clock again —<br>the coffee knows my sorrow,<br>Friday, far away.</p>' +
-         '<p>Want a hopeful version? I can write a Monday that wins. ☕</p>'
-    },
-    {
-      q: 'Find the bug: for i in range(len(xs)): print(xs[i + 1])',
-      ms: 'Thought for 3s',
-      a: '<p>On the last pass, <code>i</code> is <code>len(xs) - 1</code>, so <code>xs[i + 1]</code> reads past the end of the list and raises an <b>IndexError</b>.</p>' +
-         '<p>To print every item, loop over the list directly:</p>' +
-         '<pre><code>for x in xs:\n    print(x)</code></pre>' +
-         '<p>If you really wanted each <i>next</i> item, pair them up:</p>' +
-         '<pre><code>for cur, nxt in zip(xs, xs[1:]):\n    print(nxt)</code></pre>'
-    },
-    {
-      q: 'Plan a 20-minute workout, no equipment',
-      ms: 'Thought for 2s',
-      a: '<p>Here\'s a <b>20-minute full-body circuit</b>: 40s work, 20s rest, 3 rounds.</p>' +
-         '<ol><li><b>Jumping jacks</b>: warm up the engine</li><li><b>Squats</b>: slow down, fast up</li><li><b>Push-ups</b>: knees down is fine</li>' +
-         '<li><b>Reverse lunges</b>: alternate legs</li><li><b>Plank shoulder taps</b>: keep hips steady</li><li><b>Mountain climbers</b>: finish strong</li></ol>' +
-         '<p>6 moves × 1 min × 3 rounds = 18 min, plus a 2-minute cool-down stretch. You\'ve got this 💪</p>'
-    }
-  ];
-  var tryBody = $('#tryBody'), tryInput = $('#tryInput'), tryRun = 0, tryStarted = false;
+  var tryBody = $('#tryBody'), tryInput = $('#tryInput'), tryRun = 0, tryStarted = false, tryCurrent = 0;
+  tryInput.textContent = T('askPlaceholder');
   var promptBtns = $$('.prompt');
   var BLOOM_SVG = '<svg class="mini-bloom" viewBox="0 0 1024 1024"><g fill="currentColor">' + petals() + '</g></svg>';
 
@@ -497,7 +464,8 @@
   }
 
   function ask(i) {
-    var run = ++tryRun, item = ANSWERS[i];
+    var run = ++tryRun, item = T('answers')[i];
+    tryCurrent = i;
     promptBtns.forEach(function (b, j) { b.classList.toggle('on', j === i); });
     tryBody.innerHTML = '';
     tryInput.textContent = '';
@@ -510,13 +478,13 @@
     })();
     function go() {
       wait(260, run).then(function () {
-        tryInput.textContent = 'Ask Sonot anything…';
+        tryInput.textContent = T('askPlaceholder');
         var u = document.createElement('div');
         u.className = 'tw-user'; u.textContent = item.q;
         tryBody.appendChild(u);
         var b = document.createElement('div');
         b.className = 'tw-bot';
-        b.innerHTML = '<div class="tw-bot-h">' + BLOOM_SVG + 'Sonot <small>thinking…</small></div><div class="tw-dots"><i></i><i></i><i></i></div>';
+        b.innerHTML = '<div class="tw-bot-h">' + BLOOM_SVG + 'Sonot <small>' + T('thinking') + '</small></div><div class="tw-dots"><i></i><i></i><i></i></div>';
         tryBody.appendChild(b);
         $('.mini-bloom', b).classList.add('spin');
         return wait(900, run).then(function () {
@@ -532,4 +500,30 @@
   }
   promptBtns.forEach(function (b) { b.addEventListener('click', function () { tryStarted = true; ask(+b.dataset.prompt); }); });
   function startTry() { if (tryStarted) return; tryStarted = true; setTimeout(function () { ask(0); }, 400); }
+
+  /* ----------------------------------------------------------------------
+     11. Language switch (EN ⇄ PT), live without reloading
+     ---------------------------------------------------------------------- */
+  var langBtn = $('#langBtn');
+  function langButton() {
+    langBtn.textContent = T('langBtn');
+    langBtn.setAttribute('aria-label', T('langLabel'));
+  }
+  langButton();
+  langBtn.addEventListener('click', function () {
+    var next = I18n.lang === 'pt' ? 'en' : 'pt';
+    store('sonot.lang', next);
+    I18n.apply(next);
+  });
+  if (I18n) I18n.on(function () {
+    langButton();
+    downloadText();
+    splitManifesto();
+    stream._n = -1; quickText._n = -1;
+    toneOut.textContent = T('tones')[toneI];
+    if (tryStarted) ask(tryCurrent);
+    selectOS(screen.dataset.os);
+    layout();
+    onScroll();
+  });
 })();

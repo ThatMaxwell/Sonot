@@ -36,6 +36,18 @@
     </defs>
   </svg>
 
+  <!-- ============ LANGUAGE (the very first thing) ============ -->
+  <div id="lang" class="lang-gate" role="dialog" aria-modal="true" aria-label="Choose your language / Escolha seu idioma">
+    <div class="lg-glow" aria-hidden="true"></div>
+    <div class="lg-inner">
+      <p class="lg-q"><span>Choose your language</span><span lang="pt-BR">Escolha seu idioma</span></p>
+      <div class="lg-opts">
+        <button type="button" class="lg-btn" data-lang="en"><b>English</b><small>Continue in English</small><i aria-hidden="true">→</i></button>
+        <button type="button" class="lg-btn" data-lang="pt" lang="pt-BR"><b>Português</b><small>Continuar em português</small><i aria-hidden="true">→</i></button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ LOADER (exactly 3 seconds) ============ -->
   <div id="loader" class="loader" role="status" aria-label="Loading Sonot">
     <div class="loader-glow"></div>
@@ -59,19 +71,54 @@
     </div>
   </div>
   <script>
-    /* Starts the clock the instant the loader is parsed, so it lasts exactly 3s. */
+    /* 1. Language first. 2. Then the loader runs for exactly 3 seconds. */
     (function () {
-      var DURATION = 3000, t0 = performance.now();
-      var bar = document.getElementById('loaderBar'), pct = document.getElementById('loaderPct');
-      window.__loaderDone = new Promise(function (resolve) {
+      var DURATION = 3000, resolveDone;
+      window.__loaderDone = new Promise(function (r) { resolveDone = r; });
+      function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+      // ?reset makes the site forget everything (language, film seen, sound)
+      if (/[?&]reset\b/.test(location.search)) {
+        try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('sonot.') === 0) localStorage.removeItem(k); }); } catch (e) {}
+      }
+
+      function startLoader() {
+        document.getElementById('loader').classList.add('go');
+        var bar = document.getElementById('loaderBar'), pct = document.getElementById('loaderPct'), t0 = performance.now();
         (function tick(now) {
           var p = Math.min(1, (now - t0) / DURATION);
           var e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
           bar.style.transform = 'scaleX(' + e + ')';
           pct.textContent = Math.round(e * 100);
-          if (p < 1) requestAnimationFrame(tick); else resolve();
+          if (p < 1) requestAnimationFrame(tick); else resolveDone();
         })(t0);
+      }
+
+      var gate = document.getElementById('lang'), saved = store('sonot.lang');
+      if (saved === 'en' || saved === 'pt') {
+        window.__lang = saved;
+        gate.remove();
+        startLoader();
+        return;
+      }
+      // Highlight the visitor's likely language, but always let them choose
+      var guess = /^pt/i.test(navigator.language || '') ? 'pt' : 'en';
+      var btns = gate.querySelectorAll('[data-lang]');
+      Array.prototype.forEach.call(btns, function (b) {
+        if (b.getAttribute('data-lang') === guess) b.classList.add('guess');
+        b.addEventListener('click', function () {
+          var lang = b.getAttribute('data-lang');
+          window.__lang = lang;
+          store('sonot.lang', lang);
+          if (window.SonotI18n) window.SonotI18n.apply(lang);
+          if (window.SonotFilm && window.SonotFilm.unlockAudio) window.SonotFilm.unlockAudio(); // this click lets the intro play sound
+          b.classList.add('picked');
+          gate.classList.add('out');
+          setTimeout(startLoader, 450);
+          setTimeout(function () { gate.remove(); }, 1300);
+        });
       });
+      setTimeout(function () { (gate.querySelector('.guess') || btns[0]).focus({ preventScroll: true }); }, 50);
     })();
   </script>
 
@@ -255,7 +302,10 @@
       <a href="#people">People</a>
       <a href="#try">Try it</a>
     </nav>
-    <a class="btn btn-sm btn-primary magnetic" href="#download"><span>Download</span></a>
+    <div class="nav-r">
+      <button class="lang-btn" id="langBtn" type="button" aria-label="Mudar para português">PT</button>
+      <a class="btn btn-sm btn-primary magnetic" href="#download"><span>Download</span></a>
+    </div>
   </header>
 
   <main id="top">
@@ -609,6 +659,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/js/config.js"></script>
+  <script src="assets/js/i18n.js"></script>
   <script src="assets/js/film.js"></script>
   <script src="assets/js/main.js"></script>
 </body>

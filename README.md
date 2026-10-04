@@ -6,6 +6,7 @@ This repo holds the Sonot launch & download site.
 
 ## What's on the site
 
+0. **Language picker** (English / Português) — the very first screen, no branding. The choice is remembered; switch anytime with the EN/PT button in the nav.
 1. **Loader** that lasts exactly 3 seconds while the Sonot petals bloom in.
 2. **Launch film** (0:49), built in real time from HTML/CSS with a soundtrack synthesized in the browser (tap *Sound* or press **M**). **Esc** skips it.
 3. **Scroll story**: hero bloom, manifesto, desktop app preview (macOS / Windows / Linux), phones, capabilities, people, an interactive "ask it something hard" demo, and downloads.
@@ -18,7 +19,7 @@ Open `index.html` in a browser, or serve the folder:
 npx http-server .
 ```
 
-Handy URL flags: `?film` always plays the launch film, `?nofilm` skips it, `?reset` makes the site forget you (the film plays again on the next visit).
+Handy URL flags: `?film` always plays the launch film, `?nofilm` skips it, `?reset` makes the site forget you (language, film seen, sound), so you get the full first-visit experience again.
 
 ## Publish with GitHub Pages
 
@@ -38,6 +39,7 @@ Everything you'll want to change lives in `assets/js/config.js`:
 index.html             page markup (loader, film scenes, site sections)
 assets/css/style.css   all styles and animations
 assets/js/config.js    download links + settings
+assets/js/i18n.js      Portuguese translations + language switching
 assets/js/film.js      launch film timeline + generative soundtrack
 assets/js/main.js      loader flow, scroll scenes, interactions
 assets/brand/          Sonot icon & mark, ThatMaxwell logo, favicons, share image
