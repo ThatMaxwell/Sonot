@@ -18,7 +18,7 @@ Open `index.html` in a browser, or serve the folder:
 npx http-server .
 ```
 
-Handy URL flags: `?film` always plays the launch film, `?nofilm` skips it.
+Handy URL flags: `?film` always plays the launch film, `?nofilm` skips it, `?reset` makes the site forget you (the film plays again on the next visit).
 
 ## Publish with GitHub Pages
 

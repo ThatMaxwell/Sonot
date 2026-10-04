@@ -99,6 +99,10 @@
   window.scrollTo(0, 0);
 
   var params = new URLSearchParams(location.search);
+  // ?reset wipes everything the site remembers (film seen, sound preference)
+  if (params.has('reset')) {
+    try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('sonot.') === 0) localStorage.removeItem(k); }); } catch (e) {}
+  }
   var mode = CONFIG.film || 'first-visit';
   var playFilm = params.has('film') ||
     (!params.has('nofilm') && !reduceMotion && (mode === 'always' || (mode === 'first-visit' && store('sonot.filmSeen') !== '1')));
@@ -114,9 +118,10 @@
     loader.classList.add('done');
     setTimeout(function () { loader.remove(); }, 900);
     if (playFilm && Film) {
-      store('sonot.filmSeen', '1');
       body.classList.remove('is-loading');
-      Film.play(revealSite);
+      // Only remember the film once it has finished or been skipped,
+      // so a refresh mid-intro plays it again.
+      Film.play(function () { store('sonot.filmSeen', '1'); revealSite(); });
     } else {
       revealSite();
     }
