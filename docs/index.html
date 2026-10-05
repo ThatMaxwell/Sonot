@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <base href="/Sonot/">
+  <script>
+    /* Works from any folder (repo root redirect, /docs, a custom domain): base = this page's directory */
+    document.write('<base href="' + location.pathname.replace(/[^/]*$/, '') + '">');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Sonot is the AI that reads, reasons, writes, codes, sees and speaks — on every screen you own. Made by ThatMaxwell.">

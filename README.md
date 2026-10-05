@@ -16,7 +16,7 @@ URL flags: `?film` always plays the film, `?nofilm` skips it, `?reset` forgets e
 
 ## Publish (GitHub Pages)
 
-The compiled site lives in **`docs/`**. In the repo's **Settings → Pages**, choose *Deploy from a branch* → `main` → **`/docs`**.
+The compiled site lives in **`docs/`**. In **Settings → Pages**, choose *Deploy from a branch* → `main` with either `/ (root)` (a small `index.html` forwards to `docs/`) or `/docs`. Both work.
 
 ## Edit & rebuild
 
@@ -25,10 +25,10 @@ Requires the [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.38+)
 ```sh
 flutter pub get
 flutter run -d chrome                        # live preview
-flutter build web --release --base-href /Sonot/ --no-web-resources-cdn -o docs
+flutter build web --release --no-web-resources-cdn -o docs
 ```
 
-(`/Sonot/` matches the GitHub Pages path; use `/` if you host it at a domain root.)
+(The page works out its own base path, so it runs from any folder or domain.)
 
 - **Download links & film behaviour:** `lib/core/config.dart`
 - **All text (English + Portuguese):** `lib/core/i18n.dart`
