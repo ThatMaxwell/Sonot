@@ -144,7 +144,7 @@ class _FilmPlayerState extends State<FilmPlayer> with TickerProviderStateMixin {
   /* ---------------- impact flashes ---------------- */
   Widget _flash(double tb) {
     double f = 0;
-    for (final (at, len, peak) in const [(8.0, .35, 1.0), (17.0, .3, .85), (22.0, .45, 1.0)]) {
+    for (final (at, len, peak) in const [(8.0, .7, .45), (17.0, .5, .2), (22.0, .8, .4)]) {
       if (tb >= at && tb < at + len) f = math.max(f, peak * (1 - (tb - at) / len));
     }
     final black = tb >= 7.78 && tb < 8; // the silence before the drop

@@ -151,10 +151,10 @@ const VERT = /* glsl */`
     float tz = mod(p.z + uWarp + 90., 100.) - 90.;
     p.z = mix(p.z, tz, uTunnel);
     p += vec3(sin(uTime * 1.3 + aRand.y * 40.), cos(uTime * 1.1 + aRand.z * 40.), sin(uTime * .9 + aRand.w * 40.)) * .03;
-    p *= 1. + uPulse * .035 * (.4 + aRand.x);
+    p *= 1. + uPulse * .012 * (.4 + aRand.x);
     vec4 mv = modelViewMatrix * vec4(p, 1.);
     gl_Position = projectionMatrix * mv;
-    float s = uSize * (.45 + aRand.w * 1.1) * (1. + uPulse * .45 + uFlash * .6);
+    float s = uSize * (.45 + aRand.w * 1.1) * (1. + uPulse * .16 + uFlash * .5);
     gl_PointSize = clamp(s * uRatio * (14. / -mv.z), 0., 16. * uRatio);
     float pick = aRand.y;
     vColor = pick < .55 ? uColA : (pick < .85 ? uColB : uColC);
@@ -325,7 +325,7 @@ export function filmScene(renderer) {
       }
 
       // kicks + sparks
-      const pulse = drums(tb) ? Math.exp(-((t % BEAT) / BEAT) * 6) : 0;
+      const pulse = drums(tb) ? Math.exp(-((t % BEAT) / BEAT) * 5) * .8 : 0;
       uniforms.uPulse.value = pulse;
       let lit = 0, flash = 0;
       for (const st of sparks) { if (st <= t) { lit++; flash = Math.max(flash, Math.exp(-(t - st) * 9)); } }
@@ -344,16 +344,16 @@ export function filmScene(renderer) {
       uniforms.uAlphaK.value = P.alpha || 1; uniforms.uSoft.value = P.soft === undefined ? 1 : P.soft;
       if (mat.blending !== (P.add ? THREE.AdditiveBlending : THREE.NormalBlending)) { mat.blending = P.add ? THREE.AdditiveBlending : THREE.NormalBlending; mat.needsUpdate = true; }
       bloomNow = fast || P.bloom === 0 ? P.bloom : lerp(bloomNow, P.bloom, .15);
-      bloom.strength = bloomNow * (1 + pulse * .35);
+      bloom.strength = bloomNow * (1 + pulse * .1);
       bloom.enabled = bloomNow > .02;
       scene.background = bg;
 
       // tunnel streaming
       const tun = tb >= 17 && tb < 22.2 ? seg(tb, 17, 17.6) * (1 - seg(tb, 22, 22.3)) : 0;
       uniforms.uTunnel.value = tun;
-      warp += dt * (44 + pulse * 40) * tun;
+      warp += dt * (40 + pulse * 10) * tun;
       uniforms.uWarp.value = warp;
-      sUni.uWarp.value = warp; sUni.uLen.value = 4 + pulse * 9; sUni.uOpacity.value = tun * .9;
+      sUni.uWarp.value = warp; sUni.uLen.value = 5 + pulse * 2.5; sUni.uOpacity.value = tun * .9;
       streaks.visible = tun > .001;
 
       // the point of light
@@ -368,16 +368,16 @@ export function filmScene(renderer) {
       if (tb < 4) { pos = new THREE.Vector3(Math.sin(t * .2) * 2, Math.cos(t * .15) * 1.2, 34 - tb * 2.5); }
       else if (tb < 7) { const v = seg(tb, 4, 7); pos = new THREE.Vector3(Math.sin(t * .3) * 3, lerp(2, 19, v * v), lerp(26, 13, v)); fov = 45 + v * 12; }
       else if (tb < 8) { const v = seg(tb, 7, 8); pos = new THREE.Vector3(0, lerp(19, 2, v), lerp(13, 7, v * v)); fov = 57 - v * 10; }
-      else if (tb < 12) { const a = Math.sin((tb - 8) * .7) * .5; pos = new THREE.Vector3(Math.sin(a) * 24 * fit, 2.5, Math.cos(a) * 24 * fit); fov = 46 - pulse * 3.5; }
-      else if (tb < 15) { pos = new THREE.Vector3(Math.sin(t * .4) * 1.5, .5, 26 * fit); fov = 44 - pulse * 2.5; }
+      else if (tb < 12) { const a = Math.sin((tb - 8) * .7) * .5; pos = new THREE.Vector3(Math.sin(a) * 24 * fit, 2.5, Math.cos(a) * 24 * fit); fov = 46 - pulse * 1; }
+      else if (tb < 15) { pos = new THREE.Vector3(Math.sin(t * .4) * 1.5, .5, 26 * fit); fov = 44 - pulse * .6; }
       else if (tb < 17) { pos = new THREE.Vector3(Math.sin(t * .35) * 2, .5, 22 * fit); fov = 44; }
-      else if (tb < 22) { pos = new THREE.Vector3(0, 0, 9); tgt = new THREE.Vector3(Math.sin(t * .5) * 2, Math.cos(t * .4) * 1.5, -60); fov = 72 + pulse * 6; roll = Math.sin(t * .6) * .35; }
+      else if (tb < 22) { pos = new THREE.Vector3(0, 0, 9); tgt = new THREE.Vector3(Math.sin(t * .5) * 2, Math.cos(t * .4) * 1.5, -60); fov = 72 + pulse * 1.5; roll = Math.sin(t * .5) * .22; }
       else { pos = new THREE.Vector3(Math.sin(t * .3) * 1.2, 0, 21 * fit); fov = 44; }
       const cut = (tb >= 8 && tb < 8.06) || (tb >= 17 && tb < 17.04) || (tb >= 22 && tb < 22.04);
       camPos.lerp(pos, cut ? 1 : clamp(dt * 3.2));
       camLook.lerp(tgt, cut ? 1 : clamp(dt * 3.2));
       fovNow = lerp(fovNow, fov, cut ? 1 : clamp(dt * 5));
-      shake = Math.max(shake * Math.exp(-dt * 7), (tb >= 8 && tb < 8.1) || (tb >= 22 && tb < 22.1) ? 1 : 0);
+      shake = 0;
       camera.position.copy(camPos).add(new THREE.Vector3((Math.random() - .5) * shake * .6, (Math.random() - .5) * shake * .6, 0));
       camera.fov = fovNow; camera.updateProjectionMatrix();
       camera.lookAt(camLook);
@@ -385,7 +385,7 @@ export function filmScene(renderer) {
 
       // formation spin
       if (tb >= 4 && tb < 7.75) spin += dt * lerp(.15, 3.2, Math.pow(seg(tb, 4, 7.6), 2));
-      else if (tb >= 8 && tb < 9 || tb >= 10 && tb < 12) spin += dt * (.25 + pulse * .3);
+      else if (tb >= 8 && tb < 9 || tb >= 10 && tb < 12) spin += dt * .25;
       else if (tb >= 22) spin += dt * .12;
       else spin = lerp(spin, Math.round(spin / (Math.PI * 2)) * Math.PI * 2, .08);
       if (tb >= 4 && tb < 7.75) { group.rotation.set(0, spin, 0); }

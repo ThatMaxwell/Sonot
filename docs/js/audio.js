@@ -1,14 +1,15 @@
 /* ==========================================================================
    SONOT — "Ignition" (launch film soundtrack)
-   Hybrid trailer × EDM, synthesized live with WebAudio. 128 BPM, F minor.
-   24 bars = 45s:
-     0-3   VOID    sub drone, heartbeat, a glass pluck for every spark
-     4-7   SWARM   four-on-the-floor build, filter opens, snare roll, silence
-     8-14  DROP    BRAAAM + reese bass, supersaw stabs, the hook
-     15-16 LIGHT   breakdown: felt keys, air, riser
-     17-21 WARP    second drop, wobble bass, double-time hats
-     22-23 ARRIVAL last BRAAAM, resolves to F MAJOR (minor → light)
-   The film reads its clock from here, so every hit lands on the beat.
+   Uplifting cinematic electronic, synthesized live with WebAudio.
+   128 BPM, D major (I–V–vi–IV). 24 bars = 45s:
+     0-3   VOID    warm drone, soft heartbeat, a glass note for every spark
+     4-7   RISE    pulse arpeggio climbs, kick fades in, filter opens, a breath
+     8-14  REVEAL  half-time anthem: lush chords, bell hook, deep soft hits
+     15-16 LIGHT   breakdown: felt keys and air
+     17-21 FLIGHT  the full beat lifts it, hook an octave up
+     22-23 ARRIVAL one big open D major chord and bells
+   Built to hype, not to hurt: no distortion, no strobing noise.
+   The film reads its clock from here, so every moment lands on the beat.
    ========================================================================== */
 (function () {
   'use strict';
@@ -16,19 +17,20 @@
   var BPM = 128, BEAT = 60 / BPM, STEP = BEAT / 4, BAR = BEAT * 4, BARS = 24;
   var LENGTH = BARS * BAR;
 
-  // Fm – Eb – Db – C  (the C major is the cinematic tension chord)
+  // D – A – Bm – G  (I–V–vi–IV: the uplifting one)
   var CHORDS = [
-    { bass: 41, notes: [65, 68, 72, 77] },
-    { bass: 39, notes: [63, 67, 70, 75] },
-    { bass: 37, notes: [61, 65, 68, 73] },
-    { bass: 36, notes: [60, 64, 67, 72] }
+    { bass: 38, notes: [62, 66, 69, 74] },
+    { bass: 33, notes: [61, 64, 69, 73] },
+    { bass: 35, notes: [62, 66, 71, 74] },
+    { bass: 31, notes: [62, 67, 71, 74] }
   ];
   var HOOK = [
-    [72, null, 68, null, 72, null, 77, 75],
-    [75, null, 70, 67, 70, null, null, null],
-    [77, null, 73, null, 68, null, 65, 68],
-    [67, null, 64, null, 67, null, 72, null]
+    [74, null, 73, 74, 76, null, 74, null],
+    [73, null, 69, null, 71, 73, null, null],
+    [74, null, 71, null, 78, null, 76, 74],
+    [74, null, 71, null, 69, null, null, null]
   ];
+  var GLASS = [86, 88, 90, 93, 95, 98];
 
   // Every spark in the opening gets its own glass note (and its own flash on screen)
   var SPARKS = (function () {
@@ -41,7 +43,7 @@
     return out;
   })();
 
-  var ctx = null, master, comp, music, duck, verb, verbIn, delayIn, noise, drive, filt;
+  var ctx = null, master, comp, music, duck, verb, verbIn, delayIn, noise, filt;
   var t0 = 0, step = 0, timer = null, started = false, muted = false;
 
   function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
@@ -53,7 +55,7 @@
     ctx = new AC({ latencyHint: 'interactive' });
 
     comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -9; comp.knee.value = 6; comp.ratio.value = 8; comp.attack.value = .002; comp.release.value = .1;
+    comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = .005; comp.release.value = .2;
     master = ctx.createGain(); master.gain.value = 0;
     master.connect(comp); comp.connect(ctx.destination);
 
@@ -62,13 +64,6 @@
     filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 20000; filt.Q.value = .8;
     duck.connect(filt); filt.connect(master);
     music = ctx.createGain(); music.connect(duck);
-
-    // soft-clip drive for bass + horns
-    drive = ctx.createWaveShaper();
-    var curve = new Float32Array(1024);
-    for (var i = 0; i < 1024; i++) { var x = i / 512 - 1; curve[i] = Math.tanh(x * 2.6); }
-    drive.curve = curve; drive.oversample = '2x';
-    drive.connect(duck);
 
     // big hall reverb
     var len = ctx.sampleRate * 3.4, ir = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -114,13 +109,13 @@
   /* ---------------- instruments ---------------- */
   function kick(t, v, pump) {
     var o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(46, t + .1);
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(48, t + .12);
     g.gain.setValueAtTime(v, t); g.gain.setValueAtTime(v, t + .04); g.gain.exponentialRampToValueAtTime(.001, t + .48);
     o.connect(g); g.connect(master); o.start(t); o.stop(t + .5);
     var cf = ctx.createBiquadFilter(), cg = ctx.createGain(); cf.type = 'highpass'; cf.frequency.value = 2500;
-    cg.gain.setValueAtTime(v * .3, t); cg.gain.exponentialRampToValueAtTime(.001, t + .02);
+    cg.gain.setValueAtTime(v * .08, t); cg.gain.exponentialRampToValueAtTime(.001, t + .015);
     cf.connect(cg); cg.connect(master); noiseSrc(t, t + .03, cf);
-    if (pump !== false) { duck.gain.setValueAtTime(.12, t); duck.gain.linearRampToValueAtTime(1, t + BEAT * .7); }
+    if (pump !== false) { duck.gain.setValueAtTime(.55, t); duck.gain.linearRampToValueAtTime(1, t + BEAT * .6); }
   }
   function heartbeat(t, v) {
     [0, .17].forEach(function (o, i) {
@@ -158,19 +153,6 @@
     f.connect(g); g.connect(master); var w = ctx.createGain(); w.gain.value = .5; g.connect(w); w.connect(verbIn);
     noiseSrc(t, t + 2.3, f, true);
   }
-  // the trailer horn
-  function braaam(t, root, dur, v) {
-    var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.Q.value = 4;
-    f.frequency.setValueAtTime(120, t); f.frequency.exponentialRampToValueAtTime(1400, t + .18); f.frequency.exponentialRampToValueAtTime(260, t + dur);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .05); g.gain.setValueAtTime(v, t + dur * .55); g.gain.exponentialRampToValueAtTime(.001, t + dur);
-    f.connect(g); g.connect(drive); var w = ctx.createGain(); w.gain.value = .8; g.connect(w); w.connect(verbIn);
-    [root - 12, root, root + 7, root + 12].forEach(function (m, i) {
-      [-9, 9].forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + .05, f, c + i * 2); });
-    });
-    var s = ctx.createOscillator(), sg = ctx.createGain(); s.frequency.setValueAtTime(hz(root - 12), t);
-    sg.gain.setValueAtTime(v * .9, t); sg.gain.exponentialRampToValueAtTime(.001, t + dur);
-    s.connect(sg); sg.connect(master); s.start(t); s.stop(t + dur + .05);
-  }
   function impact(t, v) {
     var o = ctx.createOscillator(), g = ctx.createGain();
     o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(28, t + 1.6);
@@ -202,7 +184,7 @@
     var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.frequency.setValueAtTime(200, t); f.frequency.linearRampToValueAtTime(700, t + dur);
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 2); g.gain.setValueAtTime(v, t + dur - .4); g.gain.linearRampToValueAtTime(0, t + dur);
     f.connect(g); g.connect(master); var w = ctx.createGain(); w.gain.value = .5; g.connect(w); w.connect(verbIn);
-    osc('sine', hz(29), t, t + dur, g); osc('sawtooth', hz(41), t, t + dur, f, -6); osc('sawtooth', hz(48), t, t + dur, f, 7);
+    osc('sine', hz(26), t, t + dur, g); osc('sawtooth', hz(38), t, t + dur, f, -6); osc('sawtooth', hz(45), t, t + dur, f, 7);
   }
   function glass(t, m, v) {
     var g = ctx.createGain(), g2 = ctx.createGain();
@@ -235,17 +217,6 @@
     f.connect(g); send(g, .7);
     notes.forEach(function (m) { [-8, 8].forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + .9, f, c); }); });
   }
-  function reese(t, m, dur, v, wobble) {
-    var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.Q.value = 6; f.frequency.value = 700;
-    if (wobble) {
-      var lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.type = 'sine'; lfo.frequency.value = 1 / (BEAT / 2);
-      lg.gain.value = 600; lfo.connect(lg); lg.connect(f.frequency); lfo.start(t); lfo.stop(t + dur);
-    }
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .01); g.gain.setValueAtTime(v, t + dur - .03); g.gain.linearRampToValueAtTime(0, t + dur);
-    f.connect(g); g.connect(drive);
-    osc('sawtooth', hz(m), t, t + dur, f, -14); osc('sawtooth', hz(m), t, t + dur, f, 14);
-    var s = ctx.createGain(); s.gain.value = .9; s.connect(g); osc('sine', hz(m - 12), t, t + dur, s);
-  }
   function lead(t, m, dur, v) {
     var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.Q.value = 3;
     f.frequency.setValueAtTime(6000, t); f.frequency.exponentialRampToValueAtTime(1700, t + dur);
@@ -254,71 +225,105 @@
     osc('square', hz(m), t, t + dur + .1, f); var g2 = ctx.createGain(); g2.gain.value = .35; g2.connect(f); osc('sawtooth', hz(m + 12), t, t + dur + .1, g2, 6);
   }
 
+  function bell(t, m, v) { // soft FM-ish bell for the hook
+    var g = ctx.createGain(), g2 = ctx.createGain();
+    env(g, t, .004, v, .02, 1.1); env(g2, t, .004, v * .25, .01, .35);
+    osc('sine', hz(m), t, t + 1.3, g); osc('triangle', hz(m + 12), t, t + .5, g2);
+    g2.connect(g); send(g, .45, null, .35);
+  }
+  function warmBass(t, m, dur, v) {
+    var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.frequency.value = 420;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .05); g.gain.setValueAtTime(v, t + dur - .08); g.gain.linearRampToValueAtTime(0, t + dur);
+    f.connect(g); g.connect(music);
+    osc('sine', hz(m), t, t + dur, g); osc('triangle', hz(m + 12), t, t + dur, f);
+  }
+  function softBoom(t, v) { // a deep, round hit instead of a blast
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(32, t + 1.2);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + 1.8);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.9);
+    var f = ctx.createBiquadFilter(), ng = ctx.createGain(); f.type = 'lowpass'; f.frequency.setValueAtTime(2500, t); f.frequency.exponentialRampToValueAtTime(200, t + 1.5);
+    ng.gain.setValueAtTime(v * .12, t); ng.gain.exponentialRampToValueAtTime(.001, t + 1.6);
+    f.connect(ng); var w = ctx.createGain(); w.gain.value = 1; ng.connect(w); w.connect(verbIn);
+    noiseSrc(t, t + 1.7, f, true);
+  }
+  function anthem(t, notes, dur, v, cut) { // the big lush chord
+    var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.Q.value = .5;
+    if (Array.isArray(cut)) { f.frequency.setValueAtTime(cut[0], t); f.frequency.exponentialRampToValueAtTime(cut[1], t + dur); } else f.frequency.value = cut || 3200;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .25); g.gain.setValueAtTime(v, t + dur - .15); g.gain.linearRampToValueAtTime(0, t + dur + .5);
+    f.connect(g); send(g, .5);
+    notes.forEach(function (m) { [-11, -4, 4, 11].forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + .6, f, c); }); });
+  }
+
   /* ---------------- arrangement: one call per 16th step ---------------- */
   function play(n, t) {
     var bar = Math.floor(n / 16), s = n % 16, ch = CHORDS[bar % 4];
-    var drop1 = bar >= 8 && bar < 15, drop2 = bar >= 17 && bar < 22;
+    var reveal = bar >= 8 && bar < 15, flight = bar >= 17 && bar < 22;
 
-    // VOID
+    // VOID — warm, quiet, waiting
     if (bar < 4) {
-      if (n === 0) drone(t, BAR * 4, .16);
-      if (s % 8 === 0) heartbeat(t, .38 + bar * .06);
-      for (var k = 0; k < SPARKS.length; k++) if (Math.abs(SPARKS[k] - n * STEP) < 1e-6) glass(t, [84, 87, 89, 91, 96, 92][k % 6], .05);
-      if (bar === 3 && s === 0) swell(t, BAR, .22);
+      if (n === 0) drone(t, BAR * 4, .05);
+      if (s % 8 === 0 && bar >= 1) heartbeat(t, .1 + bar * .03);
+      for (var k = 0; k < SPARKS.length; k++) if (Math.abs(SPARKS[k] - n * STEP) < 1e-6) glass(t, GLASS[k % 6], .032);
+      if (bar === 2 && s === 0) pad(t, CHORDS[0].notes, BAR * 2, .022, 1000);
+      if (bar === 3 && s === 0) swell(t, BAR, .07);
     }
 
-    // SWARM — the build
+    // RISE — the arpeggio climbs, the kick comes in, the filter opens
     if (bar >= 4 && bar < 8) {
       var b = bar - 4;
-      if (n === 64) { filt.frequency.setValueAtTime(380, t); filt.frequency.exponentialRampToValueAtTime(16000, t + BAR * 3.8); }
-      if (s % 4 === 0 && !(bar === 7 && s >= 12)) kick(t, .85);
-      if (s === 0) pad(t, ch.notes, BAR, .055, 900 + b * 600);
-      pluck(t, ch.notes[[0, 2, 1, 3][s % 4]] + 12, .045 + b * .01, .3, .2);
-      if (s % 2 === 1) hat(t, .04 + b * .012);
-      if (bar >= 6 && (s === 4 || s === 12)) clap(t, .38);
-      if (s % 4 === 2) reese(t, ch.bass, STEP * 1.6, .1 + b * .03);
-      if (bar === 6 && s === 0) riser(t, BAR * 2 - BEAT, .32);
-      if (bar === 7) {
-        var on = s < 8 ? s % 2 === 0 : true;
-        if (on && s < 12) { snare(t, .14 + s * .022, 1700 + s * 170); if (s >= 8) snare(t + STEP / 2, .16 + s * .022, 1900 + s * 170); }
-      }
-      if (bar === 7 && s === 12) swell(t, BEAT, .28);
+      if (n === 64) { filt.frequency.setValueAtTime(500, t); filt.frequency.exponentialRampToValueAtTime(14000, t + BAR * 3.7); }
+      if (s === 0) anthem(t, ch.notes, BAR, .018 + b * .006, [800 + b * 450, 1400 + b * 800]);
+      if (s === 0) warmBass(t, ch.bass, BAR, .08 + b * .025);
+      var rate = bar < 6 ? 2 : 1; // 8ths, then 16ths
+      if (s % rate === 0) pluck(t, ch.notes[[0, 1, 2, 3, 2, 1][(s / rate) % 6]] + 12, .026 + b * .007, .35, .25);
+      if (bar >= 5 && s % 4 === 0 && !(bar === 7 && s >= 12)) kick(t, .26 + (bar - 5) * .09);
+      if (bar >= 6 && s % 4 === 2) hat(t, .025);
+      if (bar === 6 && s === 0) riser(t, BAR * 2 - BEAT, .1);
+      if (bar === 7 && s === 12) swell(t, BEAT, .12);
     }
 
-    // DROPS
-    if (drop1 || drop2) {
-      var first = (bar === 8 || bar === 17) && s === 0;
-      if (first) { braaam(t, 41, BAR * 1.1, .34); impact(t, .9); crash(t, .2); filt.frequency.setValueAtTime(20000, t); }
-      if (s % 4 === 0) kick(t, 1);
-      if (s === 4 || s === 12) clap(t, .5);
-      if (s % 4 === 2) hat(t, .1, true); else if (s % 2 === 1) hat(t, .05);
-      if (drop2 && s % 2 === 0 && s % 4 !== 0) hat(t, .045);
-      if (s === 0 && bar % 2 === 0 && !first) crash(t, .1);
-      if (s === 0) reese(t, ch.bass, BAR, .26, drop2);
-      if ([0, 3, 6, 10, 12].indexOf(s) >= 0) saw(t, ch.notes, s === 12 ? STEP * 3 : STEP * 1.6, .08, drop2 ? 7000 : 5600, .1, .25);
-      if (s % 2 === 0) {
-        var note = HOOK[bar % 4][s / 2];
-        if (note) lead(t, note + (bar >= 12 && bar < 15 || bar >= 20 ? 12 : 0), STEP * 1.8, .058);
-      }
-      if (drop2) pluck(t, ch.notes[[3, 1, 2, 0][s % 4]] + 12, .03, .25, .15);
+    // REVEAL — half-time anthem
+    if (reveal) {
+      if (bar === 8 && s === 0) { softBoom(t, .55); filt.frequency.setValueAtTime(20000, t); }
+      var four = bar >= 12; // the talents section lifts to four-on-the-floor
+      if (four ? s % 4 === 0 : (s === 0 || s === 10)) kick(t, four ? .55 : .6);
+      if (four ? (s === 4 || s === 12) : s === 8) clap(t, .2);
+      if (s % 2 === 0) hat(t, s % 4 === 2 ? .03 : .015);
+      if (s === 0) { anthem(t, ch.notes, BAR, .05, 3800); warmBass(t, ch.bass, BAR, .22); }
+      if (s % 2 === 0) { var note = HOOK[bar % 4][s / 2]; if (note) bell(t, note + (four ? 12 : 0), .05); }
+      if (four) pluck(t, ch.notes[[0, 2, 1, 3][s % 4]] + 24, .018, .3, .2);
     }
+
     // LIGHT — breakdown
     if (bar === 15 || bar === 16) {
-      if (s === 0) { pad(t, ch.notes, BAR, .07, 2400); if (bar === 15) braaam(t, 41, BAR * .9, .12); }
-      if (s % 2 === 0) { var kn = HOOK[bar % 4][s / 2]; if (kn) keys(t, kn, .085); }
-      if (bar === 16 && s === 0) riser(t, BAR - BEAT * .5, .34);
-      if (bar === 16 && s >= 8 && s < 14) { snare(t, .1 + (s - 8) * .03, 2200 + s * 140); snare(t + STEP / 2, .12 + (s - 8) * .03, 2400 + s * 140); }
-      if (bar === 16 && s === 12) swell(t, BEAT, .3);
+      if (s === 0) { pad(t, ch.notes, BAR, .05, 2200); warmBass(t, ch.bass, BAR, .1); }
+      if (s % 2 === 0) { var kn = HOOK[bar % 4][s / 2]; if (kn) keys(t, kn, .07); }
+      if (bar === 16 && s === 0) riser(t, BAR - BEAT * .5, .1);
+      if (bar === 16 && s >= 8 && s % 2 === 0) pluck(t, CHORDS[0].notes[(s / 2) % 4] + 12, .02 + (s - 8) * .004, .4, .2);
+      if (bar === 16 && s === 12) swell(t, BEAT, .12);
     }
 
-    // ARRIVAL — F major, the light
-    if (bar === 22 && s === 0) {
-      braaam(t, 41, BAR * 1.3, .3); impact(t, 1); kick(t, 1, false); crash(t, .22);
-      saw(t, [53, 57, 60, 65, 69, 72], BAR * 1.7, .065, [7000, 900], 1.8, .8);
-      pad(t, [41, 53, 60, 65, 69], BAR * 1.9, .08, 1800);
-      reese(t, 29, BAR * 1.2, .18);
+    // FLIGHT — the full beat
+    if (flight) {
+      if (bar === 17 && s === 0) softBoom(t, .5);
+      if (s % 4 === 0) kick(t, .65);
+      if (s === 4 || s === 12) clap(t, .24);
+      if (s % 4 === 2) hat(t, .04, true); else if (s % 2 === 1) hat(t, .018);
+      if (s === 0 && bar % 4 === 1) crash(t, .045);
+      if (s === 0) { anthem(t, ch.notes, BAR, .05, 4200); warmBass(t, ch.bass, BAR, .22); }
+      if (s % 2 === 0) { var fn = HOOK[bar % 4][s / 2]; if (fn) bell(t, fn + 12, .045); }
+      pluck(t, ch.notes[[3, 1, 2, 0][s % 4]] + 12, .022, .25, .15);
     }
-    if (bar === 22 && s % 2 === 0 && s >= 4) glass(t, [81, 84, 89, 93, 89, 84][(s / 2 - 2) % 6], .05);
+
+    // ARRIVAL — one big open D major
+    if (bar === 22 && s === 0) {
+      softBoom(t, .6); kick(t, .6, false); crash(t, .05);
+      anthem(t, [50, 57, 62, 66, 69, 74, 78], BAR * 1.8, .05, [5000, 1200]);
+      pad(t, [38, 50, 57, 62, 66], BAR * 1.9, .06, 1800);
+      warmBass(t, 26, BAR * 1.6, .2);
+    }
+    if (bar === 22 && s % 2 === 0 && s >= 2) bell(t, [86, 90, 93, 98, 93, 90, 86][(s / 2 - 1) % 7], .035);
   }
 
   function pump() {
