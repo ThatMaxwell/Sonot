@@ -1,0 +1,46 @@
+name: sonot
+description: "Sonot — launch & download site. Made by ThatMaxwell."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: false
+  assets:
+    - assets/img/
+    - assets/brand/
+
+  fonts:
+    - family: InterTight
+      fonts:
+        - asset: assets/fonts/InterTight-400.ttf
+          weight: 400
+        - asset: assets/fonts/InterTight-500.ttf
+          weight: 500
+        - asset: assets/fonts/InterTight-600.ttf
+          weight: 600
+        - asset: assets/fonts/InterTight-700.ttf
+          weight: 700
+        - asset: assets/fonts/InterTight-800.ttf
+          weight: 800
+    - family: InstrumentSerif
+      fonts:
+        - asset: assets/fonts/InstrumentSerif-400.ttf
+        - asset: assets/fonts/InstrumentSerif-400-italic.ttf
+          style: italic
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-400.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-500.ttf
+          weight: 500

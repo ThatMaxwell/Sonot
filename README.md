@@ -2,46 +2,49 @@
 
 My Best AI Work, Sonot. Made by [ThatMaxwell](https://github.com/ThatMaxwell).
 
-This repo holds the Sonot launch & download site.
+This repo holds the Sonot launch & download site, built with **Flutter** (web), with **three.js** backgrounds and a soundtrack synthesized live in the browser.
 
-## What's on the site
+## The experience
 
-0. **Language picker** (English / Português) — the very first screen, no branding. The choice is remembered; switch anytime with the EN/PT button in the nav.
-1. **Loader** that lasts exactly 3 seconds while the Sonot petals bloom in.
-2. **Launch film** (0:49), built in real time from HTML/CSS with a soundtrack synthesized in the browser (tap *Sound* or press **M**). **Esc** skips it.
-3. **Scroll story**: hero bloom, manifesto, desktop app preview (macOS / Windows / Linux), phones, capabilities, people, an interactive "ask it something hard" demo, and downloads.
+1. **Language** — English or Português, the very first screen (no branding yet). Remembered; switch anytime with the EN/PT button.
+2. **Loader** — exactly 3 seconds: the petals fly in and the icon forms around them.
+3. **Launch film** — 50 seconds, 26 bars at 124 BPM. The film's clock *is* the music, so every slam, cut and pulse lands on the beat. Esc skips, M mutes.
+4. **The site** — white + electric blue, black for contrast:
+   hero with a 3D glass bloom (three.js) · crossing marquee bands · manifesto over a petal galaxy (three.js) · pinned desktop app on macOS / Windows / Linux · fanned phones · talents bento with live tiles · sideways people carousel · interactive "ask it something hard" demo · electric-blue download section over particle waves (three.js) · footer.
 
-## Run it locally
+URL flags: `?film` always plays the film, `?nofilm` skips it, `?reset` forgets everything (language, film seen, mute).
 
-Open `index.html` in a browser, or serve the folder:
+## Publish (GitHub Pages)
+
+The compiled site lives in **`docs/`**. In the repo's **Settings → Pages**, choose *Deploy from a branch* → `main` → **`/docs`**.
+
+## Edit & rebuild
+
+Requires the [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.38+).
 
 ```sh
-npx http-server .
+flutter pub get
+flutter run -d chrome                        # live preview
+flutter build web --release --base-href /Sonot/ --no-web-resources-cdn -o docs
 ```
 
-Handy URL flags: `?film` always plays the launch film, `?nofilm` skips it, `?reset` makes the site forget you (language, film seen, sound), so you get the full first-visit experience again.
+(`/Sonot/` matches the GitHub Pages path; use `/` if you host it at a domain root.)
 
-## Publish with GitHub Pages
+- **Download links & film behaviour:** `lib/core/config.dart`
+- **All text (English + Portuguese):** `lib/core/i18n.dart`
 
-Settings → Pages → *Deploy from a branch* → pick your branch and `/ (root)`. No build step needed.
-
-## Configure
-
-Everything you'll want to change lives in `assets/js/config.js`:
-
-- `downloads`: paste each platform's download URL. Empty links show a "coming soon" toast.
-- `version` / `requirements`: the text under the download button.
-- `film`: `'first-visit'` (default), `'always'` or `'never'`.
-
-## Files
+## Code map
 
 ```
-index.html             page markup (loader, film scenes, site sections)
-assets/css/style.css   all styles and animations
-assets/js/config.js    download links + settings
-assets/js/i18n.js      Portuguese translations + language switching
-assets/js/film.js      launch film timeline + generative soundtrack
-assets/js/main.js      loader flow, scroll scenes, interactions
-assets/brand/          Sonot icon & mark, ThatMaxwell logo, favicons, share image
-assets/img/            photography (see CREDITS.md)
+lib/main.dart              language → loader → film → site
+lib/phases/intro.dart      language gate + 3s loader
+lib/film/film.dart         the launch film (10 beat-synced scenes)
+lib/site/                  site sections (hero, desktop, phones, talents, people, try it, download, footer)
+lib/widgets/motion.dart    pin-on-scroll, parallax, reveal, marquee, tilt, magnetic, smooth wheel
+lib/widgets/bloom.dart     Sonot + ThatMaxwell logos as vectors
+web/js/audio.js            the soundtrack (WebAudio synth + arrangement)
+web/js/sonot3d.js          three.js scenes: bloom, galaxy, waves
+assets/                    photos, brand marks, fonts
 ```
+
+Photo credits: see `CREDITS.md`. three.js is MIT licensed (`web/js/three.LICENSE`).

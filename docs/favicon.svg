@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Sonot</title>
+  <defs>
+    <linearGradient id="g" x1="0.4" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#0B5CFF"/>
+      <stop offset="1" stop-color="#0029C9"/>
+    </linearGradient>
+    <path id="p" d="M 512 512 C 500 440, 457 322, 440 262 A 75 75 0 1 1 584 262 C 567 322, 524 440, 512 512 Z"/>
+  </defs>
+  <rect width="1024" height="1024" rx="268" fill="url(#g)"/>
+  <g fill="#fff"><use href="#p"/><use href="#p" transform="rotate(45 512 512)"/><use href="#p" transform="rotate(90 512 512)"/><use href="#p" transform="rotate(135 512 512)"/><use href="#p" transform="rotate(180 512 512)"/><use href="#p" transform="rotate(225 512 512)"/><use href="#p" transform="rotate(270 512 512)"/><use href="#p" transform="rotate(315 512 512)"/></g>
+</svg>
