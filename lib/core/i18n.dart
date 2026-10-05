@@ -20,6 +20,10 @@ const _en = <String, dynamic>{
   // Film
   'f.words': ['Every', 'big', 'idea', 'starts', 'with', 'a', 'question.'],
   'f.tag': 'Think in *light.*',
+  'f2.l1': 'Every question',
+  'f2.l2': 'is a *spark.*',
+  'f2.l3': 'Billions of them. Every day.',
+  'f2.l4': 'Sonot turns them into *light.*',
   'f.ask.k': 'Ask anything',
   'f.ask.q': 'Plan 3 days in Kyoto under \$800',
   'f.ask.days': [
@@ -256,6 +260,10 @@ const _pt = <String, dynamic>{
 
   'f.words': ['Toda', 'grande', 'ideia', 'começa', 'com', 'uma', 'pergunta.'],
   'f.tag': 'Pense com *luz.*',
+  'f2.l1': 'Toda pergunta',
+  'f2.l2': 'é uma *faísca.*',
+  'f2.l3': 'Bilhões delas. Todo dia.',
+  'f2.l4': 'O Sonot transforma tudo em *luz.*',
   'f.ask.k': 'Pergunte qualquer coisa',
   'f.ask.q': 'Planeje 3 dias em Kyoto por menos de \$800',
   'f.ask.days': [

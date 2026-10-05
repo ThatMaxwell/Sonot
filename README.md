@@ -8,7 +8,7 @@ This repo holds the Sonot launch & download site, built with **Flutter** (web), 
 
 1. **Language** — English or Português, the very first screen (no branding yet). Remembered; switch anytime with the EN/PT button.
 2. **Loader** — exactly 3 seconds: the petals fly in and the icon forms around them.
-3. **Launch film** — 50 seconds, 26 bars at 124 BPM. The film's clock *is* the music, so every slam, cut and pulse lands on the beat. Esc skips, M mutes.
+3. **Launch film, "Ignition"** — 45 seconds, one continuous real-time 3D shot (three.js): a single particle system becomes a point of light, sparks, a vortex, implodes, explodes into the Sonot bloom on the drop, writes SONOT and the six talents in light, draws a laptop and a phone, warps through hyperspace past people's questions, and lands as the app icon. Locked to its own 128 BPM hybrid trailer/EDM soundtrack (the film's clock *is* the music). Esc skips, M mutes.
 4. **The site** — white + electric blue, black for contrast:
    hero with a 3D glass bloom (three.js) · crossing marquee bands · manifesto over a petal galaxy (three.js) · pinned desktop app on macOS / Windows / Linux · fanned phones · talents bento with live tiles · sideways people carousel · interactive "ask it something hard" demo · electric-blue download section over particle waves (three.js) · footer.
 
@@ -43,7 +43,9 @@ lib/site/                  site sections (hero, desktop, phones, talents, people
 lib/widgets/motion.dart    pin-on-scroll, parallax, reveal, marquee, tilt, magnetic, smooth wheel
 lib/widgets/bloom.dart     Sonot + ThatMaxwell logos as vectors
 web/js/audio.js            the soundtrack (WebAudio synth + arrangement)
-web/js/sonot3d.js          three.js scenes: bloom, galaxy, waves
+web/js/film3d.js           the launch film: one particle system, every formation, camera + colour moods
+web/js/sonot3d.js          three.js scenes: bloom, galaxy, waves (and mounts the film)
+web/js/jsm/                three.js bloom post-processing
 assets/                    photos, brand marks, fonts
 ```
 

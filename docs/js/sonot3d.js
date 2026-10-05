@@ -4,7 +4,8 @@
             'galaxy' petal-armed particle galaxy (on black)
             'waves'  undulating particle field (on blue)
    ========================================================================== */
-import * as THREE from './three.module.min.js';
+import * as THREE from 'three';
+import { filmScene } from './film3d.js';
 
 const scenes = new Map();
 let nextId = 1;
@@ -197,7 +198,7 @@ function wavesScene() {
   };
 }
 
-const KINDS = { bloom: bloomScene, galaxy: galaxyScene, waves: wavesScene };
+const KINDS = { bloom: bloomScene, galaxy: galaxyScene, waves: wavesScene, film: filmScene };
 
 function mount(el, kind) {
   const id = nextId++;
@@ -210,6 +211,7 @@ function mount(el, kind) {
     s.camera.aspect = w / h;
     if (kind === 'bloom') s.camera.position.z = w / h < 1 ? 22 : 15;
     s.camera.updateProjectionMatrix();
+    if (s.resize) s.resize(w, h);
   };
   entry.ro = new ResizeObserver(resize); entry.ro.observe(el); resize();
   entry.io = new IntersectionObserver((en) => { entry.visible = en[0].isIntersecting; }, { rootMargin: '100px' });
@@ -217,11 +219,11 @@ function mount(el, kind) {
   const loop = (now) => {
     entry.raf = requestAnimationFrame(loop);
     const dt = Math.min(.05, (now - entry.last) / 1000); entry.last = now;
-    if (!entry.visible || document.hidden) return;
+    if ((!entry.visible && kind !== 'film') || document.hidden) return;
     entry.t += dt;
     pointer.x += (pointer.tx - pointer.x) * .06; pointer.y += (pointer.ty - pointer.y) * .06;
     s.tick(entry.t, dt);
-    renderer.render(s.scene, s.camera);
+    if (s.render) s.render(); else renderer.render(s.scene, s.camera);
   };
   entry.raf = requestAnimationFrame(loop);
   scenes.set(id, entry);
