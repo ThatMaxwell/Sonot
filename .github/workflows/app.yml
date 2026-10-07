@@ -107,11 +107,15 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter build linux --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }} --dart-define=SONOT_GITHUB_CLIENT_ID=${{ env.SONOT_GITHUB_CLIENT_ID }}
-      - run: tar -czf Sonot-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+      - name: Package (tar.gz, AppImage, .deb)
+        run: bash linux/packaging/package.sh
       - uses: actions/upload-artifact@v4
         with:
           name: Sonot-linux
-          path: app/Sonot-linux-x64.tar.gz
+          path: |
+            app/Sonot-linux-x64.tar.gz
+            app/Sonot-x86_64.AppImage
+            app/sonot_*_amd64.deb
 
   release:
     env:

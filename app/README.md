@@ -58,7 +58,7 @@ flutter build windows --release
 flutter build linux --release
 ```
 
-Windows builds need a Windows PC. GitHub builds all three on every push that touches `app/` (see `.github/workflows/app.yml`): open the run under **Actions** and download **Sonot-windows** (installer + zip), **Sonot-android** (APK) or **Sonot-linux**. Pushing a tag like `v0.1.0` publishes them as a release.
+Windows builds need a Windows PC. GitHub builds all three on every push that touches `app/` (see `.github/workflows/app.yml`): open the run under **Actions** and download **Sonot-windows** (installer + zip), **Sonot-android** (APK) or **Sonot-linux** (AppImage, .deb and tar.gz, packed by `linux/packaging/package.sh`). Pushing a tag like `v0.1.0` publishes them as a release.
 
 The Android APK is signed with the debug key for now, so it installs by sideloading; set up a release key before the Play Store.
 
