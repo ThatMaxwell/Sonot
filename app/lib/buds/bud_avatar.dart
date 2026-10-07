@@ -394,7 +394,7 @@ class EmotionTagFilter {
   EmotionTagFilter(this.onEmotion);
   final void Function(BudEmotion) onEmotion;
   String _buf = '';
-  static final _tag = RegExp(r'\[\[emo:([a-z]+)\]\]');
+  static final _tag = RegExp(r'\[\[\s*emo\s*:\s*([A-Za-z_-]+)\s*\]\]');
 
   String add(String chunk) {
     _buf += chunk;
@@ -403,23 +403,31 @@ class EmotionTagFilter {
       final m = _tag.firstMatch(_buf);
       if (m == null) break;
       out.write(_buf.substring(0, m.start));
-      onEmotion(BudEmotion.parse(m.group(1)!));
+      onEmotion(BudEmotion.parse(m.group(1)!.toLowerCase()));
       _buf = _buf.substring(m.end);
     }
-    final open = _buf.lastIndexOf('[[');
-    if (open == -1 || _buf.length - open > 24) {
-      out.write(_buf);
-      _buf = '';
-    } else {
-      out.write(_buf.substring(0, open));
-      _buf = _buf.substring(open);
-    }
+    final hold = holdFrom(_buf, 32);
+    out.write(_buf.substring(0, hold));
+    _buf = _buf.substring(hold);
     return out.toString();
+  }
+
+  /// Where a tag that hasn't finished arriving may start in [buf]: at the
+  /// last `[[` (if it isn't closed and is at most [max] long), or at a lone
+  /// `[` at the very end. Returns buf.length when nothing needs holding.
+  static int holdFrom(String buf, int max) {
+    final open = buf.lastIndexOf('[[');
+    if (open != -1 && buf.length - open <= max && !buf.substring(open).contains(']]')) return open;
+    if (buf.endsWith('[')) return buf.length - 1;
+    return buf.length;
   }
 
   /// Call when the stream ends to flush anything held back.
   String close() {
-    final rest = _buf;
+    final rest = _buf.replaceAllMapped(_tag, (m) {
+      onEmotion(BudEmotion.parse(m.group(1)!.toLowerCase()));
+      return '';
+    });
     _buf = '';
     return rest;
   }

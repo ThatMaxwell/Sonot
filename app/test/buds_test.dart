@@ -37,4 +37,29 @@ void main() {
     expect(back.color, bud.color);
     expect(back.memory.single.text, 'Prefers TypeScript');
   });
+
+  test('face and memory tags never leak, however the stream splits them', () {
+    const reply = '[[emo:happy]]Hey there! Good to see you.\n\n[[emo:curious]]What should we dig into? '
+        '[[remember:Likes tracking prices]][[ emo: Excited ]]Let\'s go.';
+    // Every possible split point, including a lone "[" at a chunk's end.
+    for (var cut = 0; cut <= reply.length; cut++) {
+      final faces = <BudEmotion>[];
+      final notes = <String>[];
+      final e = EmotionTagFilter(faces.add);
+      final m = MemoryTagFilter(notes.add);
+      final out = m.add(e.add(reply.substring(0, cut))) + m.add(e.add(reply.substring(cut))) + m.add(e.close()) + m.close();
+      expect(out, "Hey there! Good to see you.\n\nWhat should we dig into? Let's go.", reason: 'split at $cut');
+      expect(faces, [BudEmotion.happy, BudEmotion.curious, BudEmotion.excited], reason: 'split at $cut');
+      expect(notes, ['Likes tracking prices'], reason: 'split at $cut');
+    }
+  });
+
+  test('tags split into single characters are still stripped', () {
+    const reply = 'Hi [[emo:curious]]there [x] ok[';
+    final faces = <BudEmotion>[];
+    final e = EmotionTagFilter(faces.add);
+    final out = reply.split('').map(e.add).join() + e.close();
+    expect(out, 'Hi there [x] ok[');
+    expect(faces, [BudEmotion.curious]);
+  });
 }

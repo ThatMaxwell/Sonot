@@ -167,7 +167,7 @@ class MemoryTagFilter {
   MemoryTagFilter(this.onNote);
   final void Function(String note) onNote;
   String _buf = '';
-  static final _tag = RegExp(r'\[\[remember:([^\]\n]{1,300})\]\]');
+  static final _tag = RegExp(r'\[\[\s*remember\s*:([^\]\n]{1,300})\]\]');
 
   String add(String chunk) {
     _buf += chunk;
@@ -180,19 +180,17 @@ class MemoryTagFilter {
       _buf = _buf.substring(m.end);
     }
     // Hold back a possible tag that hasn't finished arriving.
-    final open = _buf.lastIndexOf('[[');
-    if (open == -1 || _buf.length - open > 320) {
-      out.write(_buf);
-      _buf = '';
-    } else {
-      out.write(_buf.substring(0, open));
-      _buf = _buf.substring(open);
-    }
+    final hold = EmotionTagFilter.holdFrom(_buf, 320);
+    out.write(_buf.substring(0, hold));
+    _buf = _buf.substring(hold);
     return out.toString();
   }
 
   String close() {
-    final rest = _buf;
+    final rest = _buf.replaceAllMapped(_tag, (m) {
+      onNote(m.group(1)!.trim());
+      return '';
+    });
     _buf = '';
     return rest;
   }
