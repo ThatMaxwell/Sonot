@@ -111,16 +111,17 @@ String _errorFrom(String body, String fallback) {
 /// Puter's user-pays AI (the same API puter.js calls): each user signs in
 /// with their own Puter account, which covers their usage. No keys in the app.
 class PuterProvider implements ChatProvider {
-  PuterProvider(this.token);
+  PuterProvider(this.token, {this.api = 'https://api.puter.com'});
   final String token;
-
-  static const api = 'https://api.puter.com';
+  final String api;
 
   @override
   Stream<String> chat(ChatRequest req) => _lineStream(
     (client) => client.send(
       http.Request('POST', Uri.parse('$api/drivers/call'))
-        ..headers.addAll({'content-type': 'text/plain;actually=json', 'authorization': 'Bearer $token'})
+        // Plain JSON: Puter only reads `text/plain;actually=json` when the
+        // header matches exactly, and Dart appends `; charset=utf-8` to it.
+        ..headers.addAll({'content-type': 'application/json', 'authorization': 'Bearer $token'})
         ..body = jsonEncode({
           'interface': 'puter-chat-completion',
           'driver': 'ai-chat',
