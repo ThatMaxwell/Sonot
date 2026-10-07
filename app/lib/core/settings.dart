@@ -32,11 +32,12 @@ class Settings {
   String get token => _prefs.getString('token') ?? defaultToken;
   set token(String v) => _prefs.setString('token', v.trim());
 
-  /// The model and effort picked for a mode. Chat starts on Tone;
-  /// Code starts on Anthem, like Buds.
+  /// The model and effort picked for a mode. Chat starts on Tone; Code and
+  /// Buds start on Anthem (Buds at Balanced, so chatting stays snappy).
   (Tier, Effort) modelFor(Mode m) {
-    final tier = tierById(_prefs.getString('${m.name}.tier') ?? (m == Mode.code ? 'anthem' : 'tone'));
-    return (tier, tier.clamp(Effort.byName(_prefs.getString('${m.name}.effort')) ?? tier.defaultEffort));
+    final tier = tierById(_prefs.getString('${m.name}.tier') ?? (m == Mode.chat ? 'tone' : 'anthem'));
+    final fallback = m == Mode.buds ? Effort.balanced : tier.defaultEffort;
+    return (tier, tier.clamp(Effort.byName(_prefs.getString('${m.name}.effort')) ?? fallback));
   }
 
   void setModelFor(Mode m, Tier t, Effort e) {

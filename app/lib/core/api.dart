@@ -28,8 +28,11 @@ class ApiException implements Exception {
 
 /// One request: the conversation plus the knobs from the composer.
 class ChatRequest {
-  ChatRequest({required this.history, required this.mode, required this.tier, required this.effort});
+  ChatRequest({required this.history, required this.mode, required this.tier, required this.effort, this.system});
   final List<ChatMessage> history;
+
+  /// Overrides the mode's system prompt (Buds bring their own persona).
+  final String? system;
   final Mode mode;
   final Tier tier;
   final Effort effort;
@@ -51,6 +54,8 @@ const systemPrompts = {
       'You are a senior engineer pairing with the user. Be precise and direct. Prefer working code over discussion: '
       'give complete, runnable snippets in fenced code blocks with a language tag, then a short note on anything non-obvious. '
       'Ask a clarifying question only when the task truly cannot proceed without it.',
+  // Buds always send their own persona; this is only a fallback.
+  Mode.buds: 'You are a Sonot Bud, a friendly AI helper made by ThatMaxwell.',
 };
 
 /// Runs [send] and turns its line stream into a text stream with uniform
@@ -125,7 +130,7 @@ class PuterProvider implements ChatProvider {
             'stream': true,
             'reasoning_effort': req.effort.puter,
             'messages': [
-              {'role': 'system', 'content': systemPrompts[req.mode]},
+              {'role': 'system', 'content': req.system ?? systemPrompts[req.mode]},
               for (final m in req.history) m.toJson(),
             ],
           },
@@ -194,6 +199,7 @@ class ServerProvider implements ChatProvider {
             'mode': req.mode.name,
             'model': req.tier.model,
             'effort': req.effort.puter,
+            if (req.system != null) 'system': req.system,
             'messages': [for (final m in req.history) m.toJson()],
           }),
       ),

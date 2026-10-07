@@ -119,7 +119,9 @@ async function handleChat(req: http.IncomingMessage, res: http.ServerResponse) {
   }
   const messages = parseMessages(body);
   if (typeof messages === "string") return sendJson(res, 400, { error: messages });
-  const opts = body as { mode?: unknown; model?: unknown; effort?: unknown };
+  const opts = body as { mode?: unknown; model?: unknown; effort?: unknown; system?: unknown };
+  // Buds send their own persona; cap it so a request can't balloon.
+  const system = typeof opts.system === "string" && opts.system.trim() ? opts.system.slice(0, 20000) : null;
   const mode: Mode = opts.mode === "code" ? "code" : "chat";
   // The app sends the Sonot tier's model id; only Claude models run here.
   const model = typeof opts.model === "string" && /^claude-[a-z0-9-]+$/.test(opts.model) ? opts.model : MODEL;
@@ -141,7 +143,7 @@ async function handleChat(req: http.IncomingMessage, res: http.ServerResponse) {
   const stream = client.beta.messages.stream({
     model,
     max_tokens: modern ? 64000 : 32000,
-    system: SYSTEM[mode],
+    system: system ?? SYSTEM[mode],
     messages: mergeTurns(messages),
     ...(modern && {
       thinking: { type: "adaptive" },

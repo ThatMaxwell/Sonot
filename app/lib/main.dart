@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'buds/buds.dart';
 import 'core/settings.dart';
 import 'core/theme.dart';
 import 'screens/chat.dart';
@@ -9,12 +10,14 @@ import 'screens/setup.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final settings = await Settings.load();
-  runApp(SonotApp(settings: settings));
+  final buds = await BudStore.load();
+  runApp(SonotApp(settings: settings, buds: buds));
 }
 
 class SonotApp extends StatefulWidget {
-  const SonotApp({super.key, required this.settings});
+  const SonotApp({super.key, required this.settings, required this.buds});
   final Settings settings;
+  final BudStore buds;
 
   @override
   State<SonotApp> createState() => _SonotAppState();
@@ -45,7 +48,7 @@ class _SonotAppState extends State<SonotApp> {
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 450),
           child: _setupDone
-              ? ChatScreen(key: const ValueKey('chat'), settings: widget.settings, onSignOut: _signOut)
+              ? ChatScreen(key: const ValueKey('chat'), settings: widget.settings, buds: widget.buds, onSignOut: _signOut)
               : SetupScreen(key: const ValueKey('setup'), settings: widget.settings, onDone: _finishSetup),
         ),
       ),

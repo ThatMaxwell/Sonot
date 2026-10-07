@@ -25,9 +25,9 @@ class F {
   static const mono = 'JetBrainsMono';
 }
 
-/// The two moods of the app. Chat is the site's white and blue; Code is
-/// darker and more serious.
-enum Mode { chat, code }
+/// The moods of the app. Chat and Buds are the site's white and blue; Code
+/// is darker and more serious.
+enum Mode { chat, code, buds }
 
 /// Colours for one mode. Every screen reads from this instead of [C] so the
 /// whole app can cross-fade between moods.

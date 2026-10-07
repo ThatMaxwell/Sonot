@@ -1,22 +1,24 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../buds/buds.dart';
+import '../buds/buds_home.dart';
 import '../core/api.dart';
+import '../core/conversation.dart';
 import '../core/models.dart';
 import '../core/settings.dart';
 import '../core/theme.dart';
 import '../widgets/bloom.dart';
+import '../widgets/composer.dart';
 import '../widgets/glass.dart';
-import '../widgets/message.dart';
 import '../widgets/model_picker.dart';
 
-/// The one screen: a conversation over a soft backdrop, a glass top bar with
-/// the Sonot / Code switch, and a glass composer.
+/// The main screen: a glass top bar with the Sonot / Code / Buds switch over
+/// a soft backdrop. Sonot and Code are conversations; Buds is the Buds home.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.settings, required this.onSignOut});
+  const ChatScreen({super.key, required this.settings, required this.buds, required this.onSignOut});
   final Settings settings;
+  final BudStore buds;
   final VoidCallback onSignOut;
 
   @override
@@ -25,36 +27,47 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   Mode _mode = Mode.chat;
-  late final AnimationController _moodCtl = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
-  late final Animation<double> _mood = CurvedAnimation(parent: _moodCtl, curve: Curves.easeInOutCubic);
 
-  /// Each mode keeps its own conversation.
-  final Map<Mode, List<ChatMessage>> _threads = {Mode.chat: [], Mode.code: []};
-  List<ChatMessage> get _messages => _threads[_mode]!;
+  /// Cross-fades the palette from [_from] to the current mode's.
+  late final AnimationController _moodCtl = AnimationController(vsync: this, duration: const Duration(milliseconds: 520), value: 1);
+  late final Animation<double> _mood = CurvedAnimation(parent: _moodCtl, curve: Curves.easeInOutCubic);
+  Palette _from = Palette.chat;
+
+  /// Each mode keeps its own conversation and model; Code starts on the strongest.
+  final Map<Mode, Conversation> _threads = {Mode.chat: Conversation(), Mode.code: Conversation()};
+  late final Map<Mode, (Tier, Effort)> _models = {for (final m in Mode.values) m: widget.settings.modelFor(m)};
+  Conversation get _convo => _threads[_mode] ?? _threads[Mode.chat]!;
+  Tier get _tier => _models[_mode]!.$1;
+  Effort get _effort => _models[_mode]!.$2;
 
   final _input = TextEditingController();
   final _focus = FocusNode();
   final _scroll = ScrollController();
-  /// Each mode remembers its own model; Code starts on the strongest.
-  late final Map<Mode, (Tier, Effort)> _models = {for (final m in Mode.values) m: widget.settings.modelFor(m)};
-  Tier get _tier => _models[_mode]!.$1;
-  Effort get _effort => _models[_mode]!.$2;
-  StreamSubscription<String>? _reply;
-  ChatMessage? _streaming;
   bool _typing = false;
 
   @override
   void initState() {
     super.initState();
+    for (final c in _threads.values) {
+      c.addListener(_onConvo);
+    }
     _input.addListener(() {
       final typing = _input.text.trim().isNotEmpty;
       if (typing != _typing) setState(() => _typing = typing);
     });
   }
 
+  void _onConvo() {
+    if (!mounted) return;
+    setState(() {});
+    scrollToEnd(_scroll);
+  }
+
   @override
   void dispose() {
-    _reply?.cancel();
+    for (final c in _threads.values) {
+      c.dispose();
+    }
     _moodCtl.dispose();
     _input.dispose();
     _focus.dispose();
@@ -62,53 +75,33 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  bool get _busy => _reply != null;
+  Palette get _palette => Palette.lerp(_from, Palette.of(_mode), _mood.value);
 
   void _setMode(Mode m) {
     if (m == _mode) return;
-    _stop();
+    _convo.stop();
+    _from = _palette;
     setState(() => _mode = m);
-    m == Mode.code ? _moodCtl.forward() : _moodCtl.reverse();
-  }
-
-  void _newChat() {
-    _stop();
-    setState(() => _messages.clear());
+    _moodCtl.forward(from: 0);
   }
 
   void _send() {
-    final text = _input.text.trim();
-    if (text.isEmpty || _busy) return;
-    // Failed turns stay on screen but aren't sent back to the model.
-    final history = [..._messages.where((m) => !m.error), ChatMessage('user', text)];
-    final reply = ChatMessage('assistant', '');
-    setState(() {
-      _messages
-        ..add(history.last)
-        ..add(reply);
-      _streaming = reply;
-      _input.clear();
-    });
-    _scrollToEnd();
-    final req = ChatRequest(history: history, mode: _mode, tier: _tier, effort: _effort);
-    _reply = widget.settings.chatProvider.chat(req).listen(
-      (chunk) {
-        setState(() => reply.text += chunk);
-        _scrollToEnd();
+    final text = _input.text;
+    if (text.trim().isEmpty || _convo.busy) return;
+    _input.clear();
+    final mode = _mode;
+    _convo.send(
+      text,
+      provider: widget.settings.chatProvider,
+      build: (history) => ChatRequest(history: history, mode: mode, tier: _tier, effort: _effort),
+      onError: (e) {
+        if (e.signedOut) _offerSignIn();
       },
-      onError: (Object e) {
-        setState(() {
-          reply.error = true;
-          if (reply.text.isEmpty) reply.text = e.toString();
-        });
-        if (e is ApiException && e.signedOut) _offerSignIn();
-      },
-      // The stream always closes after an error, so this runs either way.
-      onDone: _finish,
     );
   }
 
   void _offerSignIn() {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Your sign-in expired.'),
@@ -130,37 +123,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _stop() {
-    if (!_busy) return;
-    _reply?.cancel();
-    final s = _streaming;
-    if (s != null && s.text.isEmpty) _threads.forEach((_, list) => list.remove(s));
-    _finish();
-  }
-
-  void _finish() {
-    if (!mounted) return;
-    setState(() {
-      _reply = null;
-      _streaming = null;
-    });
-  }
-
-  void _scrollToEnd() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scroll.hasClients) return;
-      _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 180), curve: Curves.easeOut);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _mood,
       builder: (context, _) {
-        final p = Palette.lerp(Palette.chat, Palette.code, _mood.value);
-        final dark = _mood.value > .5;
+        final p = _palette;
+        final dark = p.bg.computeLuminance() < .3;
         final pad = MediaQuery.paddingOf(context);
+        final buds = _mode == Mode.buds;
+        final empty = _convo.messages.isEmpty && !_typing;
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(statusBarColor: Colors.transparent),
           child: Scaffold(
@@ -174,10 +146,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   Positioned.fill(
                     child: IgnorePointer(
                       child: AnimatedOpacity(
-                        opacity: _messages.isEmpty && !_typing ? 1 : 0,
+                        opacity: empty && !buds ? 1 : 0,
                         duration: const Duration(milliseconds: 260),
                         child: AnimatedScale(
-                          scale: _messages.isEmpty && !_typing ? 1 : .92,
+                          scale: empty && !buds ? 1 : .92,
                           duration: const Duration(milliseconds: 320),
                           curve: Curves.easeOutCubic,
                           child: Center(
@@ -189,9 +161,39 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                  Positioned.fill(child: _list(p, pad)),
+                  Positioned.fill(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 240),
+                      child: buds
+                          ? BudsHome(key: const ValueKey('buds'), store: widget.buds, settings: widget.settings, palette: p)
+                          : ThreadView(
+                              key: const ValueKey('thread'),
+                              messages: _convo.messages,
+                              streaming: _convo.streaming,
+                              palette: p,
+                              mode: _mode,
+                              controller: _scroll,
+                            ),
+                    ),
+                  ),
                   Positioned(top: 0, left: 0, right: 0, child: _topBar(p, pad)),
-                  Positioned(left: 0, right: 0, bottom: 0, child: _composer(p, pad)),
+                  if (!buds)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Composer(
+                        controller: _input,
+                        focus: _focus,
+                        palette: p,
+                        hint: _mode == Mode.code ? 'Describe the code task…' : 'Ask Sonot anything',
+                        monoInput: _mode == Mode.code,
+                        busy: _convo.busy,
+                        onSend: _send,
+                        onStop: _convo.stop,
+                        trailing: ModelChip(tier: _tier, effort: _effort, palette: p, onTap: () => _pickModel(p)),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -201,41 +203,25 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _list(Palette p, EdgeInsets pad) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 780),
-        child: ListView.builder(
-          controller: _scroll,
-          padding: EdgeInsets.fromLTRB(18, pad.top + 84, 18, pad.bottom + 120),
-          itemCount: _messages.length,
-          itemBuilder: (_, i) {
-            final m = _messages[i];
-            return MessageView(
-              key: ObjectKey(m),
-              message: m,
-              palette: p,
-              mode: _mode,
-              waiting: identical(m, _streaming) && m.text.isEmpty,
-            );
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _topBar(Palette p, EdgeInsets pad) {
     return Padding(
       padding: EdgeInsets.fromLTRB(14, pad.top + 10, 14, 0),
       child: Row(
         children: [
-          GlassIconButton(
-            icon: Icons.add_rounded,
-            tooltip: 'New chat',
-            onTap: _newChat,
-            color: p.text,
-            fill: p.glass,
-            edge: p.edge,
+          AnimatedOpacity(
+            opacity: _mode == Mode.buds ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            child: IgnorePointer(
+              ignoring: _mode == Mode.buds,
+              child: GlassIconButton(
+                icon: Icons.add_rounded,
+                tooltip: 'New chat',
+                onTap: _convo.clear,
+                color: p.text,
+                fill: p.glass,
+                edge: p.edge,
+              ),
+            ),
           ),
           const Spacer(),
           _ModeSwitch(mode: _mode, palette: p, onChanged: _setMode),
@@ -249,76 +235,6 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             edge: p.edge,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _composer(Palette p, EdgeInsets pad) {
-    final canSend = _typing && !_busy;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(14, 0, 14, pad.bottom + 14),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 780),
-          child: Glass(
-            radius: 28,
-            fill: p.glass,
-            edge: p.edge,
-            padding: const EdgeInsets.fromLTRB(20, 6, 6, 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 11),
-                    child: CallbackShortcuts(
-                      // Desktop: Enter sends, Shift+Enter adds a line.
-                      bindings: {const SingleActivator(LogicalKeyboardKey.enter): _send},
-                      child: TextField(
-                        controller: _input,
-                        focusNode: _focus,
-                        minLines: 1,
-                        maxLines: 6,
-                        textInputAction: TextInputAction.newline,
-                        style: (_mode == Mode.code ? mono(15, c: p.text) : sans(16, c: p.text, w: FontWeight.w400)),
-                        cursorColor: p.accent,
-                        decoration: InputDecoration.collapsed(
-                          hintText: _mode == Mode.code ? 'Describe the code task…' : 'Ask Sonot anything',
-                          hintStyle: sans(16, c: p.textSoft, w: FontWeight.w400),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ModelChip(tier: _tier, effort: _effort, palette: p, onTap: () => _pickModel(p)),
-                const SizedBox(width: 6),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: canSend || _busy ? p.accent : p.textSoft.withValues(alpha: .18),
-                  ),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    shape: const CircleBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: _busy ? _stop : (canSend ? _send : null),
-                      child: Icon(
-                        _busy ? Icons.stop_rounded : Icons.arrow_upward_rounded,
-                        size: 22,
-                        color: canSend || _busy ? p.onAccent : p.textSoft,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -398,7 +314,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   }
 }
 
-/// "Sonot | Code" glass segmented switch.
+/// "Sonot | Code | Buds" glass segmented switch.
 class _ModeSwitch extends StatelessWidget {
   const _ModeSwitch({required this.mode, required this.palette, required this.onChanged});
   final Mode mode;
@@ -416,7 +332,7 @@ class _ModeSwitch extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: ShapeDecoration(
             shape: StadiumBorder(side: BorderSide(color: on ? p.edge : Colors.transparent, width: .7)),
             color: on ? p.text.withValues(alpha: .08) : Colors.transparent,
@@ -438,7 +354,7 @@ class _ModeSwitch extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [seg(Mode.chat, 'Sonot'), seg(Mode.code, 'Code')],
+        children: [seg(Mode.chat, 'Sonot'), seg(Mode.code, 'Code'), seg(Mode.buds, 'Buds')],
       ),
     );
   }

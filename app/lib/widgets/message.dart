@@ -9,11 +9,19 @@ import 'markdown.dart';
 /// One turn. Yours sits right in a tinted glass bubble; Sonot's reads as
 /// plain text on the page, with code fences in hairline glass boxes.
 class MessageView extends StatelessWidget {
-  const MessageView({super.key, required this.message, required this.palette, required this.mode, required this.waiting});
+  const MessageView({
+    super.key,
+    required this.message,
+    required this.palette,
+    required this.mode,
+    required this.waiting,
+    this.waitingWidget,
+  });
   final ChatMessage message;
   final Palette palette;
   final Mode mode;
   final bool waiting;
+  final Widget? waitingWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +59,7 @@ class MessageView extends StatelessWidget {
     if (waiting) {
       return Padding(
         padding: const EdgeInsets.only(top: 22, bottom: 4),
-        child: Align(alignment: Alignment.centerLeft, child: SpinningMark(size: 22, color: p.accent)),
+        child: Align(alignment: Alignment.centerLeft, child: waitingWidget ?? SpinningMark(size: 22, color: p.accent)),
       );
     }
 
