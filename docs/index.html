@@ -31,6 +31,8 @@
     flt-glass-pane, flutter-view { background: transparent; }
   </style>
   <script>
+    /* Phones and tablets get a lighter build of every effect (same look, less work per frame). */
+    window.sonotLite = matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 700 || (navigator.hardwareConcurrency || 8) <= 4;
     /* three.js loads as a module; Flutter may ask for a scene before it's ready, so queue. */
     (function () {
       var queue = [], ids = 0, real = {};

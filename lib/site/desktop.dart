@@ -16,7 +16,7 @@ class DesktopShowcase extends StatefulWidget {
 }
 
 class _DesktopShowcaseState extends State<DesktopShowcase> {
-  String os = userOS == 'win' || userOS == 'linux' ? userOS : 'mac';
+  String os = userOS == 'linux' ? 'linux' : 'win';
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class _DesktopShowcaseState extends State<DesktopShowcase> {
   );
 
   Widget _tabs() {
-    const tabs = [('mac', 'macOS'), ('win', 'Windows'), ('linux', 'Linux')];
+    const tabs = [('win', 'Windows'), ('linux', 'Linux')];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -175,7 +175,7 @@ class _Computer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wall = {'mac': 'wall-sonoma', 'win': 'wall-peaks', 'linux': 'wall-starry'}[os]!;
+    final wall = {'win': 'wall-peaks', 'linux': 'wall-starry'}[os]!;
     final w = Curves.easeOutCubic.transform(seg(p, .16, .27));
     final quickOn = p > .69;
     return Stack(
@@ -186,7 +186,6 @@ class _Computer extends StatelessWidget {
             child: Image.asset('assets/img/$wall.webp', key: ValueKey(wall), fit: BoxFit.cover, width: 1600, height: 1000),
           ),
         ),
-        if (os == 'mac') _macBar(),
         if (os == 'linux') _linuxBar(),
         // App window
         Positioned(
@@ -225,43 +224,11 @@ class _Computer extends StatelessWidget {
             ),
           ),
         ),
-        if (os == 'mac') _dock(w > .4, p),
         if (os == 'win') _taskbar(),
         if (os == 'linux') _dash(),
       ],
     );
   }
-
-  Widget _macBar() => Positioned(
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 36,
-    child: Container(
-      color: C.white.withValues(alpha: .35),
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Row(
-        children: [
-          Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(color: C.ink, borderRadius: BorderRadius.circular(4)),
-          ),
-          const SizedBox(width: 20),
-          Text('Sonot', style: sans(15, w: FontWeight.w700)),
-          for (final m in tl('os.menu'))
-            Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: Text(m, style: sans(15)),
-            ),
-          const Spacer(),
-          const SonotMark(size: 18, color: C.ink),
-          const SizedBox(width: 18),
-          Text(t('os.clock'), style: sans(15)),
-        ],
-      ),
-    ),
-  );
 
   Widget _linuxBar() => Positioned(
     left: 0,
@@ -294,56 +261,6 @@ class _Computer extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-
-  Widget _dock(bool open, double p) {
-    final bounce = p > .13 && p < .2 ? math.sin((p - .13) / .07 * math.pi * 2).abs() * 22 : 0.0;
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 14,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: C.white.withValues(alpha: .3),
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: C.white.withValues(alpha: .4)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final c in const [0xFF46B4FF, 0xFFFF9F1C, 0xFF34D17A, 0xFFFF4D6D]) _appIcon(Color(c)),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Transform.translate(
-                    offset: Offset(0, -bounce),
-                    child: const Padding(padding: EdgeInsets.symmetric(horizontal: 5), child: SonotIcon(size: 62)),
-                  ),
-                  const SizedBox(height: 3),
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(color: open ? C.ink : const Color(0x00000000), shape: BoxShape.circle),
-                  ),
-                ],
-              ),
-              for (final c in const [0xFF9B5DE5, 0xFF8D99AE]) _appIcon(Color(c)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _appIcon(Color c) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 5),
-    child: Container(
-      width: 62,
-      height: 62,
-      decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(15)),
     ),
   );
 
@@ -380,7 +297,7 @@ class _Computer extends StatelessWidget {
             top: 0,
             bottom: 0,
             child: Center(
-              child: Text('9:41\n10/4/2026', textAlign: TextAlign.right, style: sans(13, h: 1.3)),
+              child: Text('10:24\n10/4/2026', textAlign: TextAlign.right, style: sans(13, h: 1.3)),
             ),
           ),
         ],
@@ -446,34 +363,16 @@ class _AppWindow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(
               children: [
-                if (os == 'mac')
-                  for (final c in const [0xFFFF5F57, 0xFFFEBC2E, 0xFF28C840])
-                    Container(
-                      margin: const EdgeInsets.only(right: 9),
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(color: Color(c), shape: BoxShape.circle),
-                    ),
-                if (os != 'mac')
-                  Text(
-                    'Sonot',
-                    style: sans(15, w: FontWeight.w600, c: C.ink2),
-                  ),
+                Text(
+                  'Sonot',
+                  style: sans(15, w: FontWeight.w600, c: C.ink2),
+                ),
                 const Spacer(),
-                if (os == 'mac')
-                  Text(
-                    'Sonot',
-                    style: sans(15, w: FontWeight.w600, c: C.ink2),
+                for (final g in const ['—', '□', '✕'])
+                  Padding(
+                    padding: const EdgeInsets.only(left: 22),
+                    child: Text(g, style: sans(15, c: C.ink2)),
                   ),
-                const Spacer(),
-                if (os != 'mac') ...[
-                  for (final g in const ['—', '□', '✕'])
-                    Padding(
-                      padding: const EdgeInsets.only(left: 22),
-                      child: Text(g, style: sans(15, c: C.ink2)),
-                    ),
-                ] else
-                  const SizedBox(width: 60),
               ],
             ),
           ),
@@ -509,7 +408,7 @@ class _AppWindow extends StatelessWidget {
                               style: sans(15, w: FontWeight.w600, c: C.white),
                             ),
                             const Spacer(),
-                            Text('⌘N', style: mono(12, c: C.white.withValues(alpha: .7), ls: 0)),
+                            Text('Ctrl N', style: mono(12, c: C.white.withValues(alpha: .7), ls: 0)),
                           ],
                         ),
                       ),
@@ -793,7 +692,7 @@ class _QuickAsk extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(color: C.mist, borderRadius: BorderRadius.circular(8)),
-                child: Text('⌥ Space', style: mono(12, ls: 0)),
+                child: Text('Alt Space', style: mono(12, ls: 0)),
               ),
             ],
           ),
@@ -820,7 +719,7 @@ class _QuickAsk extends StatelessWidget {
                   children: [
                     Text('↵ ${t('app.replace')}', style: sans(13, c: C.mute)),
                     const SizedBox(width: 18),
-                    Text('⌘C ${t('app.copy')}', style: sans(13, c: C.mute)),
+                    Text('Ctrl C ${t('app.copy')}', style: sans(13, c: C.mute)),
                   ],
                 ),
               ],

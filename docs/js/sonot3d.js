@@ -7,6 +7,8 @@
 import * as THREE from 'three';
 import { filmScene } from './film3d.js';
 
+const LITE = !!window.sonotLite;
+const pixelRatio = (lite) => Math.min(lite ? 1.25 : 2, window.devicePixelRatio || 1);
 const scenes = new Map();
 let nextId = 1;
 const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -46,9 +48,10 @@ function studioEnv(renderer) {
   return tex;
 }
 
-function makeRenderer(el) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+function makeRenderer(el, kind) {
+  // On phones, point-cloud scenes skip MSAA (points don't need it) and render at a lower pixel ratio.
+  const renderer = new THREE.WebGLRenderer({ antialias: !LITE || kind === 'bloom', alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(kind === 'film' && LITE ? 1 : pixelRatio(LITE));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -66,7 +69,7 @@ function bloomScene(renderer) {
   const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
   camera.position.set(0, 0, 15);
 
-  const geo = new THREE.ExtrudeGeometry(petalShape(), { depth: .34, bevelEnabled: true, bevelThickness: .16, bevelSize: .13, bevelSegments: 8, curveSegments: 36 });
+  const geo = new THREE.ExtrudeGeometry(petalShape(), { depth: .34, bevelEnabled: true, bevelThickness: .16, bevelSize: .13, bevelSegments: LITE ? 4 : 8, curveSegments: LITE ? 16 : 36 });
   geo.translate(0, 0, -.17);
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0x0b5cff, metalness: .05, roughness: .16, clearcoat: 1, clearcoatRoughness: .06,
@@ -87,7 +90,7 @@ function bloomScene(renderer) {
     flower.add(pivot);
     petals.push({ pivot, mesh, phase: i * .7 });
   }
-  const core = new THREE.Mesh(new THREE.SphereGeometry(.34, 48, 48), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .1, clearcoat: 1, envMapIntensity: 1.5 }));
+  const core = new THREE.Mesh(new THREE.SphereGeometry(.34, LITE ? 24 : 48, LITE ? 24 : 48), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .1, clearcoat: 1, envMapIntensity: 1.5 }));
   core.position.z = .3;
   flower.add(core);
   scene.add(flower);
@@ -136,7 +139,7 @@ function galaxyScene() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, .1, 200);
   camera.position.set(0, 9, 16); camera.lookAt(0, 0, 0);
-  const N = 26000, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  const N = LITE ? 11000 : 26000, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
   const inner = new THREE.Color(0xffffff), outer = new THREE.Color(0x0b5cff), deep = new THREE.Color(0x0a1a66);
   for (let i = 0; i < N; i++) {
     const arm = i % 8, r = Math.pow(Math.random(), 1.6) * 11 + .2;
@@ -152,7 +155,7 @@ function galaxyScene() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: .05, vertexColors: true, transparent: true, opacity: .95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: LITE ? .065 : .05, vertexColors: true, transparent: true, opacity: .95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
   scene.add(pts);
   let progress = 0;
   return {
@@ -172,9 +175,9 @@ function wavesScene() {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(50, 1, .1, 200);
   camera.position.set(0, 6, 14); camera.lookAt(0, 0, 0);
-  const W = 140, D = 70, N = W * D, pos = new Float32Array(N * 3);
+  const W = LITE ? 84 : 140, D = LITE ? 42 : 70, N = W * D, gap = .28 * 140 / W, pos = new Float32Array(N * 3);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: .06, transparent: true, opacity: .85, depthWrite: false }));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: LITE ? .08 : .06, transparent: true, opacity: .85, depthWrite: false }));
   scene.add(pts);
   let progress = 0;
   return {
@@ -184,7 +187,7 @@ function wavesScene() {
       let k = 0;
       const mx = pointer.x * 10, mz = pointer.y * 6;
       for (let i = 0; i < W; i++) for (let j = 0; j < D; j++) {
-        const x = (i - W / 2) * .28, z = (j - D / 2) * .28;
+        const x = (i - W / 2) * gap, z = (j - D / 2) * gap;
         const d = Math.hypot(x - mx, z - mz);
         pos[k++] = x;
         pos[k++] = Math.sin(x * .35 + t * 1.1) * .55 + Math.cos(z * .45 + t * .8) * .45 + Math.sin(d * 1.2 - t * 3) * .35 * Math.exp(-d * .18);
@@ -202,7 +205,7 @@ const KINDS = { bloom: bloomScene, galaxy: galaxyScene, waves: wavesScene, film:
 
 function mount(el, kind) {
   const id = nextId++;
-  const renderer = makeRenderer(el);
+  const renderer = makeRenderer(el, kind);
   const s = KINDS[kind](renderer);
   const entry = { el, renderer, s, visible: true, t: 0, last: performance.now(), raf: 0 };
   const resize = () => {

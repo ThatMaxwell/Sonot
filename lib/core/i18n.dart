@@ -55,7 +55,7 @@ const _en = <String, dynamic>{
   'f.mont.end': 'Every question deserves a *brilliant* answer.',
   'f.every': 'On every screen *you own.*',
   'f.fin.by': 'Made by ThatMaxwell',
-  'f.fin.avail': 'Free on macOS · Windows · Linux · iOS · Android',
+  'f.fin.avail': 'Free on Windows · Linux · Android',
 
   // Nav
   'nav': ['Desktop', 'Mobile', 'Talents', 'People', 'Try it'],
@@ -68,7 +68,7 @@ const _en = <String, dynamic>{
   'hero.sub': 'The AI that reads, reasons, writes, codes, sees and speaks — beautifully, on every screen you own.',
   'dl.for': 'Download for {os}',
   'hero.film': 'Watch the film',
-  'hero.plat': 'Free · macOS · Windows · Linux · iOS · Android',
+  'hero.plat': 'Free · Windows · Linux · Android',
   'scroll': 'Scroll',
 
   'marquee': ['Reads', 'Reasons', 'Writes', 'Codes', 'Sees', 'Speaks', 'Remembers'],
@@ -81,7 +81,10 @@ const _en = <String, dynamic>{
   // Desktop
   'desk.eyebrow': 'Desktop app',
   'desk.t': 'Your desktop, *now brilliant.*',
-  'desk.notes': ['A native app that opens in a blink and stays out of your way.', 'Quick Ask: press ⌥ Space over any app to rewrite, explain or translate.'],
+  'desk.notes': [
+    'A native app that opens in a blink and stays out of your way.',
+    'Quick Ask: press Alt + Space over any app to rewrite, explain or translate.',
+  ],
   'app.new': 'New chat',
   'app.search': 'Search',
   'app.today': 'Today',
@@ -111,12 +114,11 @@ const _en = <String, dynamic>{
   'app.quickText': '“Hey team! Quick heads-up: launch moves to Thursday so we can polish a few things. Thanks for rolling with it — you\'re the best.”',
   'app.replace': 'Replace',
   'app.copy': 'Copy',
-  'os.menu': ['File', 'Edit', 'View', 'Window', 'Help'],
-  'os.clock': 'Sun 4 Oct  9:41',
+  'os.clock': 'Sun 4 Oct  10:24',
   'os.activities': 'Activities',
 
   // Phones
-  'phones.eyebrow': 'iOS & Android',
+  'phones.eyebrow': 'Android',
   'phones.t': 'In your pocket. *Always on.*',
   'phones.sub': 'Ask out loud on a walk, snap a photo of a menu, or get a heads-up before your day starts.',
   'ph.date': 'Sunday, October 4',
@@ -234,15 +236,9 @@ const _en = <String, dynamic>{
   // Download + footer
   'dl.t': 'Get *Sonot.*',
   'dl.sub': 'Free to start. Yours in under a minute.',
-  'dl.plat': ['Apple silicon & Intel', 'Windows 10 & 11', '.AppImage · .deb', 'iPhone & iPad', 'Android 10+'],
+  'dl.plat': ['Windows 10 & 11', '.AppImage · .deb', 'Android 10+'],
   'dl.version': 'v1.0 — preview',
-  'dl.req': {
-    'mac': 'macOS 12 or later',
-    'win': 'Windows 10 or later',
-    'linux': 'Ubuntu 20.04+, Fedora 36+',
-    'ios': 'iOS 16 or later',
-    'android': 'Android 10 or later',
-  },
+  'dl.req': {'win': 'Windows 10 or later', 'linux': 'Ubuntu 20.04+, Fedora 36+', 'android': 'Android 10 or later'},
   'dl.soon': 'Sonot for {os} is almost here. Downloads open soon.',
   'foot.made': 'Made with obsession by',
   'foot.replay': 'Replay film',
@@ -295,7 +291,7 @@ const _pt = <String, dynamic>{
   'f.mont.end': 'Toda pergunta merece uma resposta *brilhante.*',
   'f.every': 'Em todas as *suas telas.*',
   'f.fin.by': 'Feito por ThatMaxwell',
-  'f.fin.avail': 'Grátis no macOS · Windows · Linux · iOS · Android',
+  'f.fin.avail': 'Grátis no Windows · Linux · Android',
 
   'nav': ['Computador', 'Celular', 'Talentos', 'Pessoas', 'Experimente'],
   'download': 'Baixar',
@@ -306,7 +302,7 @@ const _pt = <String, dynamic>{
   'hero.sub': 'A IA que lê, raciocina, escreve, programa, enxerga e fala — lindamente, em todas as suas telas.',
   'dl.for': 'Baixar para {os}',
   'hero.film': 'Assistir ao filme',
-  'hero.plat': 'Grátis · macOS · Windows · Linux · iOS · Android',
+  'hero.plat': 'Grátis · Windows · Linux · Android',
   'scroll': 'Role',
 
   'marquee': ['Lê', 'Raciocina', 'Escreve', 'Programa', 'Enxerga', 'Fala', 'Lembra'],
@@ -320,7 +316,7 @@ const _pt = <String, dynamic>{
   'desk.t': 'Seu computador, *agora brilhante.*',
   'desk.notes': [
     'Um app nativo que abre num piscar de olhos e não atrapalha.',
-    'Pergunta Rápida: aperte ⌥ Space sobre qualquer app para reescrever, explicar ou traduzir.',
+    'Pergunta Rápida: aperte Alt + Space sobre qualquer app para reescrever, explicar ou traduzir.',
   ],
   'app.new': 'Nova conversa',
   'app.search': 'Buscar',
@@ -351,11 +347,10 @@ const _pt = <String, dynamic>{
   'app.quickText': '“Oi, pessoal! Rapidinho: o lançamento foi pra quinta pra gente caprichar nos detalhes. Valeu por toparem — vocês são demais.”',
   'app.replace': 'Substituir',
   'app.copy': 'Copiar',
-  'os.menu': ['Arquivo', 'Editar', 'Visualizar', 'Janela', 'Ajuda'],
-  'os.clock': 'Dom 4 out  9:41',
+  'os.clock': 'Dom 4 out  10:24',
   'os.activities': 'Atividades',
 
-  'phones.eyebrow': 'iOS e Android',
+  'phones.eyebrow': 'Android',
   'phones.t': 'No seu bolso. *Sempre ligado.*',
   'phones.sub': 'Pergunte em voz alta numa caminhada, fotografe um cardápio ou receba um aviso antes do seu dia começar.',
   'ph.date': 'domingo, 4 de outubro',
@@ -485,15 +480,9 @@ const _pt = <String, dynamic>{
 
   'dl.t': 'Baixe o *Sonot.*',
   'dl.sub': 'Grátis pra começar. Pronto em menos de um minuto.',
-  'dl.plat': ['Apple silicon e Intel', 'Windows 10 e 11', '.AppImage · .deb', 'iPhone e iPad', 'Android 10+'],
+  'dl.plat': ['Windows 10 e 11', '.AppImage · .deb', 'Android 10+'],
   'dl.version': 'v1.0 — prévia',
-  'dl.req': {
-    'mac': 'macOS 12 ou mais recente',
-    'win': 'Windows 10 ou mais recente',
-    'linux': 'Ubuntu 20.04+, Fedora 36+',
-    'ios': 'iOS 16 ou mais recente',
-    'android': 'Android 10 ou mais recente',
-  },
+  'dl.req': {'win': 'Windows 10 ou mais recente', 'linux': 'Ubuntu 20.04+, Fedora 36+', 'android': 'Android 10 ou mais recente'},
   'dl.soon': 'O Sonot para {os} está quase pronto. Os downloads abrem em breve.',
   'foot.made': 'Feito com obsessão por',
   'foot.replay': 'Rever o filme',
