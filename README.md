@@ -2,7 +2,7 @@
 
 My Best AI Work, Sonot. Made by [ThatMaxwell](https://github.com/ThatMaxwell).
 
-This repo holds the Sonot launch & download site, built with **Flutter** (web), with **three.js** backgrounds and a soundtrack synthesized live in the browser.
+This repo holds the **Sonot app** ([`app/`](app), Flutter for Windows, Android and Linux, with an optional [`server/`](server)) and the Sonot launch & download site, built with **Flutter** (web), with **three.js** backgrounds and a soundtrack synthesized live in the browser.
 
 ## The experience
 

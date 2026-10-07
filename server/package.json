@@ -1,0 +1,20 @@
+{
+  "name": "sonot-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Small server that holds the Anthropic API key and streams Sonot chat replies.",
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "start": "node src/server.ts",
+    "dev": "node --watch src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

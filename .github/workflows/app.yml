@@ -1,0 +1,120 @@
+name: Sonot app builds
+
+# Builds the Sonot chat app for Windows, Android and Linux on every push
+# that touches app/, and attaches the files to the run (Actions > this run >
+# Artifacts). Pushing a tag like v0.1.0 also publishes them as a GitHub release.
+on:
+  push:
+    paths: ["app/**", ".github/workflows/app.yml"]
+    tags: ["v*"]
+  pull_request:
+    paths: ["app/**", ".github/workflows/app.yml"]
+  workflow_dispatch:
+    inputs:
+      server:
+        description: "Server address to bake into the builds (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: "3.47.6"
+  # Baked-in server: the dispatch input wins, then the SONOT_SERVER repo variable.
+  SONOT_SERVER: ${{ github.event.inputs.server || vars.SONOT_SERVER }}
+
+defaults:
+  run:
+    working-directory: app
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  windows:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter build windows --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }}
+      - name: Zip the app folder
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Sonot-windows.zip
+      - name: Build the installer (Sonot-Setup.exe)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup --no-progress -y | Out-Null }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          & $iscc windows/installer/sonot.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sonot-windows
+          path: |
+            app/Sonot-windows.zip
+            app/build/installer/Sonot-Setup.exe
+
+  android:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter build apk --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }}
+      - run: cp build/app/outputs/flutter-apk/app-release.apk Sonot.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sonot-android
+          path: app/Sonot.apk
+
+  linux:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+        working-directory: .
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter build linux --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }}
+      - run: tar -czf Sonot-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sonot-linux
+          path: app/Sonot-linux-x64.tar.gz
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
