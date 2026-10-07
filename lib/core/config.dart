@@ -6,10 +6,8 @@ class SonotConfig {
   /// Download links. Leave '' while they are placeholders: the buttons then
   /// show a friendly "coming soon" message instead of going anywhere.
   static const downloads = <String, String>{
-    'mac': '', // e.g. 'https://github.com/ThatMaxwell/Sonot/releases/latest/download/Sonot.dmg'
-    'win': '', // e.g. '.../Sonot-Setup.exe'
+    'win': '', // e.g. 'https://github.com/ThatMaxwell/Sonot/releases/latest/download/Sonot-Setup.exe'
     'linux': '', // e.g. '.../Sonot.AppImage'
-    'ios': '', // App Store URL
     'android': '', // Google Play URL
   };
 
@@ -21,4 +19,4 @@ class SonotConfig {
   static const github = 'https://github.com/ThatMaxwell';
 }
 
-const osNames = {'mac': 'macOS', 'win': 'Windows', 'linux': 'Linux', 'ios': 'iPhone', 'android': 'Android'};
+const osNames = {'win': 'Windows', 'linux': 'Linux', 'android': 'Android'};

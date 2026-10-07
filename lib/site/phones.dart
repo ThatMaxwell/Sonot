@@ -85,7 +85,7 @@ class _Phone extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(child: child),
-              const _Island(),
+              const _PunchHole(),
             ],
           ),
         ),
@@ -94,18 +94,19 @@ class _Phone extends StatelessWidget {
   );
 }
 
-class _Island extends StatelessWidget {
-  const _Island();
+/// Android-style punch-hole front camera.
+class _PunchHole extends StatelessWidget {
+  const _PunchHole();
   @override
   Widget build(BuildContext context) => Positioned(
-    top: 12,
+    top: 16,
     left: 0,
     right: 0,
     child: Center(
       child: Container(
-        width: 120,
-        height: 34,
-        decoration: BoxDecoration(color: C.ink, borderRadius: BorderRadius.circular(20)),
+        width: 24,
+        height: 24,
+        decoration: const BoxDecoration(color: C.ink, shape: BoxShape.circle),
       ),
     ),
   );
@@ -116,7 +117,7 @@ Widget _status(Color c) => Padding(
   child: Row(
     children: [
       Text(
-        '9:41',
+        '10:24',
         style: sans(16, w: FontWeight.w700, c: c),
       ),
       const Spacer(),
@@ -171,7 +172,7 @@ class _LockScreen extends StatelessWidget {
             style: sans(20, w: FontWeight.w600, c: C.white),
           ),
           Text(
-            '9:41',
+            '10:24',
             style: sans(104, w: FontWeight.w600, c: C.white, ls: -.04, h: 1),
           ),
           const Spacer(),
@@ -251,11 +252,11 @@ class _ChatScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(22, 26, 22, 14),
           child: Row(
             children: [
-              Text('‹', style: sans(30, c: C.blue, h: 1)),
+              Text('←', style: sans(26, c: C.blue, h: 1)),
               const Spacer(),
               Text(t('ph.chatTitle'), style: sans(17, w: FontWeight.w700)),
               const Spacer(),
-              Text('•••', style: sans(22, c: C.blue)),
+              Text('⋮', style: sans(26, c: C.blue, h: 1)),
             ],
           ),
         ),

@@ -204,9 +204,6 @@ class _OsPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     final fill = Paint()..color = c;
     switch (os) {
-      case 'mac':
-        canvas.drawRRect(RRect.fromLTRBR(4, 5, 20, 16, const Radius.circular(1.8)), stroke);
-        canvas.drawLine(const Offset(2, 19), const Offset(22, 19), stroke);
       case 'win':
         canvas.drawPath(Path()..addPolygon(const [Offset(3, 5.6), Offset(10.4, 4.5), Offset(10.4, 11.5), Offset(3, 11.5)], true), fill);
         canvas.drawPath(Path()..addPolygon(const [Offset(11.6, 4.3), Offset(21, 3), Offset(21, 11.5), Offset(11.6, 11.5)], true), fill);
@@ -222,9 +219,6 @@ class _OsPainter extends CustomPainter {
           stroke,
         );
         canvas.drawLine(const Offset(12.5, 15), const Offset(17, 15), stroke);
-      case 'ios':
-        canvas.drawRRect(RRect.fromLTRBR(6.5, 2.5, 17.5, 21.5, const Radius.circular(3)), stroke);
-        canvas.drawLine(const Offset(10.5, 5.6), const Offset(13.5, 5.6), stroke);
       case 'android':
         canvas.drawPath(
           Path()

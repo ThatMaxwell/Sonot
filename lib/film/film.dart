@@ -217,7 +217,7 @@ class _FilmPlayerState extends State<FilmPlayer> with TickerProviderStateMixin {
         alignment: const Alignment(0, .84),
         child: Opacity(
           opacity: seg(tb, 15.6, 16) * o,
-          child: Text('macOS  ·  Windows  ·  Linux  ·  iOS  ·  Android', textAlign: TextAlign.center, style: mono(math.min(13, s.width * .028), c: C.blue, ls: .18)),
+          child: Text('Windows  ·  Linux  ·  Android', textAlign: TextAlign.center, style: mono(math.min(13, s.width * .028), c: C.blue, ls: .18)),
         ),
       ));
     }

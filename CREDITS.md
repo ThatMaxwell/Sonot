@@ -4,7 +4,6 @@ Photography from [Unsplash](https://unsplash.com), used under the [Unsplash Lice
 
 | File | Unsplash photo |
 | --- | --- |
-| wall-sonoma.webp | https://unsplash.com/photos/1618005182384-a83a8bd57fbe |
 | wall-peaks.webp | https://unsplash.com/photos/1506905925346-21bda4d32df4 |
 | wall-starry.webp | https://unsplash.com/photos/1519681393784-d120267933ba |
 | phone-mountain.webp | https://unsplash.com/photos/1534067783941-51c9c23ecefd |

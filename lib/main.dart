@@ -59,7 +59,7 @@ class _ShellState extends State<Shell> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    for (final p in [...montagePhotos, 'assets/img/desk-coffee.webp', 'assets/img/wall-sonoma.webp', 'assets/img/phone-mountain.webp']) {
+    for (final p in [...montagePhotos, 'assets/img/desk-coffee.webp', 'assets/img/wall-peaks.webp', 'assets/img/phone-mountain.webp']) {
       precacheImage(AssetImage(p), context);
     }
   }

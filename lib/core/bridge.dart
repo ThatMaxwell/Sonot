@@ -147,12 +147,12 @@ class Browser {
     final ua = web.window.navigator.userAgent;
     final plat = web.window.navigator.platform;
     final touch = web.window.navigator.maxTouchPoints > 1;
-    if (RegExp('android', caseSensitive: false).hasMatch(ua)) return 'android';
-    if (RegExp('iPhone|iPad|iPod').hasMatch(ua) || (plat.contains('Mac') && touch)) return 'ios';
+    // Sonot ships for Windows, Linux and Android. Phones and tablets get
+    // Android; every other computer gets Windows unless it runs Linux.
+    if (RegExp('android|iPhone|iPad|iPod', caseSensitive: false).hasMatch(ua) || (plat.contains('Mac') && touch)) return 'android';
     if (plat.contains('Win') || ua.contains('Windows')) return 'win';
-    if (plat.contains('Mac') || ua.contains('Mac OS X')) return 'mac';
     if (RegExp('Linux|X11|CrOS').hasMatch(plat + ua)) return 'linux';
-    return 'mac';
+    return 'win';
   }
 
   static bool get reducedMotion => web.window.matchMedia('(prefers-reduced-motion: reduce)').matches;

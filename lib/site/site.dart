@@ -690,7 +690,7 @@ class _DownloadState extends State<_Download> with SingleTickerProviderStateMixi
   Widget build(BuildContext context) {
     final vp = context.vp;
     final mobile = context.isMobile;
-    final plats = ['mac', 'win', 'linux', 'ios', 'android'];
+    final plats = ['win', 'linux', 'android'];
     final subs = tl('dl.plat');
     final req = (tr('dl.req') as Map)[userOS] as String;
     return MouseRegion(
@@ -788,7 +788,7 @@ class _DownloadState extends State<_Download> with SingleTickerProviderStateMixi
                                     OsGlyph(plats[i], size: 30, color: h || plats[i] == userOS ? C.blue : C.white),
                                     const SizedBox(height: 12),
                                     Text(
-                                      osNames[plats[i]] == 'iPhone' ? 'iOS' : osNames[plats[i]]!,
+                                      osNames[plats[i]]!,
                                       style: sans(17, w: FontWeight.w700, c: h || plats[i] == userOS ? C.ink : C.white),
                                     ),
                                     const SizedBox(height: 3),

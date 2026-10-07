@@ -348,23 +348,21 @@ class _TryItState extends State<TryIt> {
                 ),
                 child: Row(
                   children: [
-                    for (final c in const [0xFFFF5F57, 0xFFFEBC2E, 0xFF28C840])
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(color: Color(c), shape: BoxShape.circle),
-                      ),
-                    const Spacer(),
                     const SonotIcon(size: 22),
                     const SizedBox(width: 8),
                     Text('Sonot', style: sans(15, w: FontWeight.w700)),
-                    const Spacer(),
+                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: C.sky, borderRadius: BorderRadius.circular(20)),
                       child: Text(t('try.badge').toUpperCase(), style: mono(10, c: C.blue)),
                     ),
+                    const Spacer(),
+                    for (final g in const ['—', '□', '✕'])
+                      Padding(
+                        padding: const EdgeInsets.only(left: 18),
+                        child: Text(g, style: sans(14, c: C.ink2)),
+                      ),
                   ],
                 ),
               ),
