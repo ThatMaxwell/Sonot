@@ -662,6 +662,46 @@ class _Manifesto extends StatelessWidget {
 /* ==========================================================================
    DOWNLOAD — electric blue, particle waves, floating 3D icon
    ========================================================================== */
+/// Sonot, buds and Sonot Code. "buds" always wears its own round font.
+class _Family extends StatelessWidget {
+  const _Family();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget pill(Widget label) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+      decoration: BoxDecoration(
+        color: C.white.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: C.white.withValues(alpha: .3)),
+      ),
+      child: label,
+    );
+    final word = sans(17, w: FontWeight.w700, c: C.white, ls: -.02);
+    return Column(
+      children: [
+        Text(t('dl.family').toUpperCase(), style: mono(11, c: C.white.withValues(alpha: .7), ls: .2)),
+        const SizedBox(height: 12),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            pill(Text('Sonot', style: word)),
+            pill(
+              Text(
+                'buds',
+                style: TextStyle(fontFamily: F.toy, fontSize: 20, height: 1.05, color: C.white, fontVariations: const [FontVariation('wght', 600)]),
+              ),
+            ),
+            pill(Text('Sonot Code', style: word)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _Download extends StatefulWidget {
   const _Download({required this.revealed, required this.progress});
   final ValueListenable<bool> revealed;
@@ -761,6 +801,8 @@ class _DownloadState extends State<_Download> with SingleTickerProviderStateMixi
                       delay: 300,
                       child: Text('${t('dl.version')} · $req', style: mono(11.5, c: C.white.withValues(alpha: .7), ls: .08)),
                     ),
+                    const SizedBox(height: 34),
+                    const Reveal(delay: 320, child: _Family()),
                     SizedBox(height: vp.height * .09),
                     Reveal(
                       delay: 340,

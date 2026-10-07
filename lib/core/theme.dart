@@ -18,6 +18,8 @@ class C {
 class F {
   static const sans = 'InterTight';
   static const serif = 'InstrumentSerif';
+  /// Round toy-like face. The word "buds" is always set in it, lowercase.
+  static const toy = 'Fredoka';
   static const mono = 'JetBrainsMono';
 }
 

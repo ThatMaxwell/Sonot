@@ -69,7 +69,7 @@ function bloomScene(renderer) {
   const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
   camera.position.set(0, 0, 15);
 
-  const geo = new THREE.ExtrudeGeometry(petalShape(), { depth: .34, bevelEnabled: true, bevelThickness: .16, bevelSize: .13, bevelSegments: LITE ? 4 : 8, curveSegments: LITE ? 16 : 36 });
+  const geo = new THREE.ExtrudeGeometry(petalShape(), { depth: .34, bevelEnabled: true, bevelThickness: .16, bevelSize: .13, bevelSegments: LITE ? 6 : 8, curveSegments: LITE ? 28 : 36 });
   geo.translate(0, 0, -.17);
   const mat = new THREE.MeshPhysicalMaterial({
     color: 0x0b5cff, metalness: .05, roughness: .16, clearcoat: 1, clearcoatRoughness: .06,
@@ -155,7 +155,7 @@ function galaxyScene() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: LITE ? .065 : .05, vertexColors: true, transparent: true, opacity: .95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: LITE ? .055 : .05, vertexColors: true, transparent: true, opacity: .95, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
   scene.add(pts);
   let progress = 0;
   return {
@@ -177,7 +177,7 @@ function wavesScene() {
   camera.position.set(0, 6, 14); camera.lookAt(0, 0, 0);
   const W = LITE ? 84 : 140, D = LITE ? 42 : 70, N = W * D, gap = .28 * 140 / W, pos = new Float32Array(N * 3);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: LITE ? .08 : .06, transparent: true, opacity: .85, depthWrite: false }));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: .06, transparent: true, opacity: .85, depthWrite: false }));
   scene.add(pts);
   let progress = 0;
   return {
