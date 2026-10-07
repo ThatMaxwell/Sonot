@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sonot_app/buds/bud_avatar.dart';
 import 'package:sonot_app/buds/buds.dart';
+import 'package:sonot_app/core/models.dart';
 
 void main() {
   test('memory tags are pulled out of the text, even when split across chunks', () {
@@ -61,5 +62,20 @@ void main() {
     final out = reply.split('').map(e.add).join() + e.close();
     expect(out, 'Hi there [x] ok[');
     expect(faces, [BudEmotion.curious]);
+  });
+
+  test('each Bud keeps its own model, defaulting to Anthem', () {
+    final bud = starterBuds().first;
+    expect(bud.tier.id, 'anthem');
+    expect(bud.effort, Effort.balanced);
+    bud
+      ..tier = tierById('chord')
+      ..effort = Effort.deep;
+    final back = Bud.fromJson(bud.toJson());
+    expect(back.tier.id, 'chord');
+    expect(back.effort, Effort.deep);
+    // Buds saved before models were per Bud load as Anthem.
+    final old = bud.toJson()..remove('tier')..remove('effort');
+    expect(Bud.fromJson(old).tier.id, 'anthem');
   });
 }

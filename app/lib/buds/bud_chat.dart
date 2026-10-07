@@ -7,6 +7,7 @@ import '../core/settings.dart';
 import '../core/theme.dart';
 import '../widgets/composer.dart';
 import '../widgets/glass.dart';
+import '../widgets/model_picker.dart';
 import 'bud_avatar.dart';
 import 'buds.dart';
 
@@ -72,7 +73,7 @@ class _BudChatState extends State<BudChat> {
       _face.emotion = e;
     });
     final notes = MemoryTagFilter(_remember);
-    final (tier, effort) = widget.settings.modelFor(Mode.buds);
+    final (tier, effort) = (bud.tier, bud.effort);
     _convo.send(
       text,
       provider: widget.settings.chatProvider,
@@ -188,6 +189,7 @@ class _BudChatState extends State<BudChat> {
                   busy: _convo.busy,
                   onSend: _send,
                   onStop: _convo.stop,
+                  trailing: ModelChip(tier: bud.tier, effort: bud.effort, palette: p, onTap: () => _pickModel(p)),
                 ),
               ),
             ],
@@ -229,7 +231,7 @@ class _BudChatState extends State<BudChat> {
                     children: [
                       Text(bud.name, style: sans(16.5, c: p.text, w: FontWeight.w700)),
                       Text(
-                        _convo.busy ? 'thinking…' : 'Sonot Anthem',
+                        _convo.busy ? 'thinking…' : bud.tier.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(12.5, c: p.textSoft, w: FontWeight.w400),
@@ -264,6 +266,20 @@ class _BudChatState extends State<BudChat> {
       ),
     );
   }
+
+  void _pickModel(Palette p) => showModelPicker(
+    context: context,
+    palette: p,
+    tier: bud.tier,
+    effort: bud.effort,
+    onChanged: (t, e) {
+      setState(() {
+        bud.tier = t;
+        bud.effort = e;
+      });
+      widget.store.save();
+    },
+  );
 
   Future<void> _delete() async {
     final yes = await showDialog<bool>(

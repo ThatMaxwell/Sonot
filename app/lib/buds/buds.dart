@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/models.dart';
 import 'bud_avatar.dart';
 
 /// A note a Bud keeps about you. Every one is visible, editable and
@@ -30,7 +31,12 @@ class Bud {
     required this.job,
     required this.vibe,
     List<MemoryNote>? memory,
-  }) : memory = memory ?? [];
+    String? tierId,
+    Effort? effort,
+  }) : memory = memory ?? [],
+       tier = tierById(tierId ?? 'anthem') {
+    this.effort = tier.clamp(effort ?? Effort.balanced);
+  }
 
   final String id;
   String name;
@@ -39,6 +45,10 @@ class Bud {
   String job;
   String vibe;
   final List<MemoryNote> memory;
+
+  /// The model this Bud runs on, picked per Bud. Defaults to Sonot Anthem.
+  Tier tier;
+  late Effort effort;
 
   /// The persona the model runs with. Built from the job and vibe, plus the
   /// visible memory and the rules every Bud follows.
@@ -68,6 +78,8 @@ Ground rules: you are an AI, and you say so if asked. No romance or flirting. If
     'job': job,
     'vibe': vibe,
     'memory': [for (final n in memory) n.toJson()],
+    'tier': tier.id,
+    'effort': effort.name,
   };
 
   static Bud fromJson(Map<String, dynamic> j) => Bud(
@@ -78,6 +90,8 @@ Ground rules: you are an AI, and you say so if asked. No romance or flirting. If
     job: j['job'] as String,
     vibe: j['vibe'] as String,
     memory: [for (final n in (j['memory'] as List? ?? [])) MemoryNote.fromJson(n as Map<String, dynamic>)],
+    tierId: j['tier'] as String?,
+    effort: Effort.byName(j['effort'] as String?),
   );
 }
 
