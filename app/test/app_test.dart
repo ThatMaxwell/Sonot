@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sonot_app/buds/bud_avatar.dart';
@@ -9,6 +10,7 @@ import 'package:sonot_app/widgets/bloom.dart';
 
 Future<SonotApp> _app(Map<String, Object> values) async {
   SharedPreferences.setMockInitialValues(values);
+  FlutterSecureStorage.setMockInitialValues({});
   return SonotApp(settings: await Settings.load(), buds: await BudStore.load());
 }
 
@@ -56,5 +58,23 @@ void main() {
     }
     expect(find.byType(BudAvatar), findsWidgets);
     expect(find.text('New Bud'), findsOneWidget);
+  });
+
+  testWidgets('settings has every section and keeps a cua.ai key', (tester) async {
+    tester.view.physicalSize = const Size(900, 3600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final app = await _app({'puterToken': 'test-token', 'puterUser': 'carrot'});
+    await tester.pumpWidget(app);
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    for (final s in ['ACCOUNT', 'MODELS AND EFFORT', 'CLOUD COMPUTER', 'GITHUB', 'CODE PERMISSIONS', 'NOTIFICATIONS', 'APPEARANCE', 'ABOUT']) {
+      expect(find.text(s), findsOneWidget, reason: s);
+    }
+    expect(find.text('carrot'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'cua.ai API key'), 'sk-cua-123');
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(app.settings.cuaApiKey, 'sk-cua-123');
   });
 }

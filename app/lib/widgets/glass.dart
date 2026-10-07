@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/ui_prefs.dart';
+
 /// Frosted glass: a backdrop blur, a faint fill and a hairline white edge.
 ///
 /// Blurs share one backdrop pass when they sit under a [BackdropGroup]
@@ -32,23 +34,27 @@ class Glass extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       side: BorderSide(color: edge, width: .7),
     );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter.grouped(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: DecoratedBox(
-          decoration: ShapeDecoration(
-            shape: shape,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              // A touch brighter at the top-left, like light catching glass.
-              colors: [Color.alphaBlend(const Color(0x0FFFFFFF), fill), fill],
-            ),
-          ),
-          child: padding == null ? child : Padding(padding: padding!, child: child),
+    final box = DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: shape,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          // A touch brighter at the top-left, like light catching glass.
+          colors: [Color.alphaBlend(const Color(0x0FFFFFFF), fill), fill],
         ),
       ),
+      child: padding == null ? child : Padding(padding: padding!, child: child),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      // Blur can be turned off in Settings > Appearance for slower devices.
+      child: UiPrefs.blur(context)
+          ? BackdropFilter.grouped(
+              filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+              child: box,
+            )
+          : box,
     );
   }
 }
@@ -82,7 +88,10 @@ class GlassIconButton extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
-          child: SizedBox.square(dimension: size, child: Icon(icon, size: size * .45, color: color)),
+          child: SizedBox.square(
+            dimension: size,
+            child: Icon(icon, size: size * .45, color: color),
+          ),
         ),
       ),
     );
@@ -119,9 +128,7 @@ class _BackdropPainter extends CustomPainter {
       canvas.drawCircle(
         c,
         r,
-        Paint()
-          ..shader = RadialGradient(colors: [blobs[i], blobs[i].withValues(alpha: 0)])
-              .createShader(Rect.fromCircle(center: c, radius: r)),
+        Paint()..shader = RadialGradient(colors: [blobs[i], blobs[i].withValues(alpha: 0)]).createShader(Rect.fromCircle(center: c, radius: r)),
       );
     }
   }

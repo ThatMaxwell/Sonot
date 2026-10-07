@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../core/models.dart';
 import '../core/theme.dart';
+import '../core/ui_prefs.dart';
 import 'bloom.dart';
 import 'glass.dart';
 
@@ -132,7 +133,7 @@ class _PickerState extends State<_Picker> with SingleTickerProviderStateMixin {
       _effort = e;
     });
     widget.onChanged(_tier, _effort);
-    if (hype) _celebrate();
+    if (hype && UiPrefs.motion(context)) _celebrate();
   }
 
   @override

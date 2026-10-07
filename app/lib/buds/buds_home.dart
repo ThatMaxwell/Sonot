@@ -86,6 +86,10 @@ class BudsHome extends StatelessWidget {
   Future<void> _make(BuildContext context) async {
     final bud = await showMakeBud(context: context, palette: palette);
     if (bud == null || !context.mounted) return;
+    final (tier, effort) = settings.modelFor(Mode.buds);
+    bud
+      ..tier = tier
+      ..effort = effort;
     store.add(bud);
     _open(context, bud);
   }

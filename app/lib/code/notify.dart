@@ -12,6 +12,10 @@ class Notifier {
   static final instance = Notifier._();
 
   final _plugin = FlutterLocalNotificationsPlugin();
+
+  /// Set from Settings: notifications on at all, and urgent ones allowed.
+  bool Function() enabled = () => true;
+  bool Function() urgentAllowed = () => true;
   bool _ready = false;
   int _id = 1;
 
@@ -63,6 +67,8 @@ class Notifier {
 
   /// Shows a notification. Returns false when the system has none.
   Future<bool> show(String title, String body, {bool urgent = false}) async {
+    if (!enabled()) return false;
+    urgent = urgent && urgentAllowed();
     await init();
     if (!_ready) return false;
     try {

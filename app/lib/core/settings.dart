@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
@@ -11,12 +13,71 @@ import 'theme.dart';
 const defaultServer = String.fromEnvironment('SONOT_SERVER');
 const defaultToken = String.fromEnvironment('SONOT_APP_TOKEN');
 
-/// What the app remembers between launches.
-class Settings {
-  Settings._(this._prefs);
+/// What the app remembers between launches. Secrets (your cua.ai key) live
+/// in the system keychain through flutter_secure_storage; the rest in
+/// shared preferences. Listeners hear about appearance changes.
+class Settings extends ChangeNotifier {
+  Settings._(this._prefs, this._secrets);
   final SharedPreferences _prefs;
+  final Map<String, String> _secrets;
 
-  static Future<Settings> load() async => Settings._(await SharedPreferences.getInstance());
+  static const _secure = FlutterSecureStorage();
+  static const _secretKeys = ['cua.key'];
+
+  static Future<Settings> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final secrets = <String, String>{};
+    for (final k in _secretKeys) {
+      try {
+        final v = await _secure.read(key: k);
+        if (v != null) secrets[k] = v;
+      } catch (e) {
+        debugPrint('Secure storage unavailable: $e');
+      }
+    }
+    return Settings._(prefs, secrets);
+  }
+
+  void _setSecret(String key, String value) {
+    final v = value.trim();
+    if (v.isEmpty) {
+      _secrets.remove(key);
+      _secure.delete(key: key).catchError((Object e) => debugPrint('$e'));
+    } else {
+      _secrets[key] = v;
+      _secure.write(key: key, value: v).catchError((Object e) => debugPrint('$e'));
+    }
+  }
+
+  /// Your own cua.ai API key for cloud computers (Buds, and Code's cloud
+  /// browser). Sent to your Sonot server as `X-Cua-Api-Key`.
+  String get cuaApiKey => _secrets['cua.key'] ?? '';
+  set cuaApiKey(String v) => _setSecret('cua.key', v);
+
+  /// Notifications: on at all, and whether urgent ones may break through.
+  bool get notifications => _prefs.getBool('notify.on') ?? true;
+  set notifications(bool v) => _prefs.setBool('notify.on', v);
+  bool get urgentAlerts => _prefs.getBool('notify.urgent') ?? true;
+  set urgentAlerts(bool v) => _prefs.setBool('notify.urgent', v);
+
+  /// Appearance: text size, glass blur, and the playful animations.
+  double get textScale => _prefs.getDouble('ui.textScale') ?? 1.0;
+  set textScale(double v) {
+    _prefs.setDouble('ui.textScale', v);
+    notifyListeners();
+  }
+
+  bool get blur => _prefs.getBool('ui.blur') ?? true;
+  set blur(bool v) {
+    _prefs.setBool('ui.blur', v);
+    notifyListeners();
+  }
+
+  bool get motion => _prefs.getBool('ui.motion') ?? true;
+  set motion(bool v) {
+    _prefs.setBool('ui.motion', v);
+    notifyListeners();
+  }
 
   /// 'puter' (default: each user signs in with Puter) or 'server'.
   String get provider => _prefs.getString('provider') ?? 'puter';

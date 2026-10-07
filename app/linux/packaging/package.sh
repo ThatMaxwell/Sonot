@@ -40,7 +40,7 @@ Package: sonot
 Version: $VERSION
 Architecture: amd64
 Maintainer: ThatMaxwell <noreply@github.com>
-Depends: libgtk-3-0
+Depends: libgtk-3-0, libsecret-1-0
 Section: utils
 Priority: optional
 Homepage: https://github.com/ThatMaxwell/Sonot

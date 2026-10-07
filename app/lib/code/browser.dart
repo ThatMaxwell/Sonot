@@ -17,11 +17,24 @@ typedef BrowserEvent = Map<String, dynamic>;
 /// Android, or when you pick "cloud", the Sonot server runs the same helper
 /// against a cua.ai cloud computer.
 class BrowserRunner {
-  BrowserRunner({required this.cloudServer, required this.cloudToken});
+  BrowserRunner({required this.cloudServer, required this.cloudToken, this.cloudCuaKey});
 
   /// The Sonot server for cloud browsing.
   final String Function() cloudServer;
   final String Function() cloudToken;
+
+  /// Your own cua.ai key, if you set one; the server uses it for your computers.
+  final String Function()? cloudCuaKey;
+
+  Map<String, String> _cloudHeaders() {
+    final token = cloudToken();
+    final cua = cloudCuaKey?.call() ?? '';
+    return {
+      'content-type': 'application/json',
+      if (token.isNotEmpty) 'authorization': 'Bearer $token',
+      if (cua.isNotEmpty) 'x-cua-api-key': cua,
+    };
+  }
 
   Process? _helper;
   Future<void>? _starting;
@@ -207,11 +220,10 @@ class BrowserRunner {
   /// One computer-use action on the cloud computer named [computer].
   /// Returns `{ok, text, screenshot?}`.
   Future<Map<String, dynamic>> act(String computer, Map<String, dynamic> action) async {
-    final token = cloudToken();
     final res = await http
         .post(
           _server('/v1/computer'),
-          headers: {'content-type': 'application/json', if (token.isNotEmpty) 'authorization': 'Bearer $token'},
+          headers: _cloudHeaders(),
           body: jsonEncode({...action, 'computer': computer}),
         )
         .timeout(const Duration(minutes: 16));
@@ -225,10 +237,9 @@ class BrowserRunner {
     out = StreamController<BrowserEvent>(
       onListen: () async {
         try {
-          final token = cloudToken();
           final res = await client.send(
             http.Request('POST', _server('/v1/browser'))
-              ..headers.addAll({'content-type': 'application/json', if (token.isNotEmpty) 'authorization': 'Bearer $token'})
+              ..headers.addAll(_cloudHeaders())
               ..body = jsonEncode(req),
           );
           if (res.statusCode != 200) {

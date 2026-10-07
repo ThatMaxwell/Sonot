@@ -19,6 +19,7 @@ import '../widgets/bloom.dart';
 import '../widgets/composer.dart';
 import '../widgets/glass.dart';
 import '../widgets/model_picker.dart';
+import 'settings_screen.dart';
 
 /// The main screen: a glass top bar with the Sonot / Code / Buds switch over
 /// a soft backdrop. Sonot and Code are conversations; Buds is the Buds home.
@@ -43,7 +44,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   /// Sonot Code's hands: commands, Node.js, files, the browser, GitHub.
   late final _github = GitHub(widget.settings);
   late final _permissions = Permissions(widget.settings);
-  late final _browser = BrowserRunner(cloudServer: () => widget.settings.server, cloudToken: () => widget.settings.token);
+  late final _browser = BrowserRunner(
+    cloudServer: () => widget.settings.server,
+    cloudToken: () => widget.settings.token,
+    cloudCuaKey: () => widget.settings.cuaApiKey,
+  );
   late final _toolbox = Toolbox(settings: widget.settings, permissions: _permissions, browser: _browser, github: _github);
 
   /// Each mode keeps its own conversation and model; Code starts on the strongest.
@@ -164,7 +169,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             body: BackdropGroup(
               child: Stack(
                 children: [
-                  Positioned.fill(child: Backdrop(base: p.bg, blobs: p.blobs)),
+                  Positioned.fill(
+                    child: Backdrop(base: p.bg, blobs: p.blobs),
+                  ),
                   // The mark sits behind an empty chat and steps aside once you type.
                   Positioned.fill(
                     child: IgnorePointer(
@@ -236,14 +243,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             duration: const Duration(milliseconds: 200),
             child: IgnorePointer(
               ignoring: _mode == Mode.buds,
-              child: GlassIconButton(
-                icon: Icons.add_rounded,
-                tooltip: 'New chat',
-                onTap: _convo.clear,
-                color: p.text,
-                fill: p.glass,
-                edge: p.edge,
-              ),
+              child: GlassIconButton(icon: Icons.add_rounded, tooltip: 'New chat', onTap: _convo.clear, color: p.text, fill: p.glass, edge: p.edge),
             ),
           ),
           // Code's tools button, mirrored by an empty slot on the right so the switch stays centred.
@@ -261,14 +261,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           _ModeSwitch(mode: _mode, palette: p, onChanged: _setMode),
           const Spacer(),
           _codeSlot(const SizedBox.square(dimension: 44)),
-          GlassIconButton(
-            icon: Icons.tune_rounded,
-            tooltip: 'Settings',
-            onTap: () => _openSettings(p),
-            color: p.text,
-            fill: p.glass,
-            edge: p.edge,
-          ),
+          GlassIconButton(icon: Icons.tune_rounded, tooltip: 'Settings', onTap: () => _openSettings(p), color: p.text, fill: p.glass, edge: p.edge),
         ],
       ),
     );
@@ -281,77 +274,22 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   );
 
   Future<void> _openSettings(Palette p) async {
-    final st = widget.settings;
-    final puter = st.provider == 'puter';
-    final server = TextEditingController(text: st.server);
-    final token = TextEditingController(text: st.token);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      barrierColor: Colors.black.withValues(alpha: .25),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, MediaQuery.viewInsetsOf(ctx).bottom + MediaQuery.paddingOf(ctx).bottom + 12),
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Glass(
-              radius: 30,
-              blur: 30,
-              fill: Color.alphaBlend(p.glass, p.bg.withValues(alpha: .6)),
-              edge: p.edge,
-              padding: const EdgeInsets.fromLTRB(22, 22, 22, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Account', style: sans(20, c: p.text, w: FontWeight.w700, ls: -.02)),
-                  const SizedBox(height: 6),
-                  Text(
-                    puter
-                        ? 'Signed in to Puter as ${st.puterUser.isEmpty ? 'you' : st.puterUser}. Your Puter account covers your AI usage.'
-                        : 'Using your own Sonot server.',
-                    style: sans(14.5, c: p.textSoft, w: FontWeight.w400),
-                  ),
-                  if (!puter) ...[
-                    const SizedBox(height: 16),
-                    _SheetField(controller: server, label: 'Server address', palette: p),
-                    const SizedBox(height: 10),
-                    _SheetField(controller: token, label: 'App token', palette: p, obscure: true),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          widget.onSignOut();
-                        },
-                        child: Text(puter ? 'Sign out' : 'Switch to Puter', style: sans(14.5, c: p.textSoft)),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {
-                          if (!puter) {
-                            st.server = server.text;
-                            st.token = token.text;
-                          }
-                          Navigator.pop(ctx);
-                        },
-                        child: Text('Done', style: sans(15, c: p.accent, w: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+    await Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 260),
+        pageBuilder: (_, _, _) => SettingsScreen(settings: widget.settings, github: _github, palette: p, onSignOut: widget.onSignOut),
+        transitionsBuilder: (_, a, _, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, .03), end: Offset.zero).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+            child: child,
           ),
         ),
       ),
     );
-    server.dispose();
-    token.dispose();
+    // Default models may have changed.
+    if (mounted) setState(() => _models.addAll({for (final m in Mode.values) m: widget.settings.modelFor(m)}));
   }
 }
 
@@ -393,36 +331,7 @@ class _ModeSwitch extends StatelessWidget {
       fill: p.glass,
       edge: p.edge,
       padding: const EdgeInsets.all(4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [seg(Mode.chat, 'Sonot'), seg(Mode.code, 'Code'), seg(Mode.buds, 'Buds')],
-      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [seg(Mode.chat, 'Sonot'), seg(Mode.code, 'Code'), seg(Mode.buds, 'Buds')]),
     );
   }
-}
-
-class _SheetField extends StatelessWidget {
-  const _SheetField({required this.controller, required this.label, required this.palette, this.obscure = false});
-  final TextEditingController controller;
-  final String label;
-  final Palette palette;
-  final bool obscure;
-
-  @override
-  Widget build(BuildContext context) => TextField(
-    controller: controller,
-    obscureText: obscure,
-    autocorrect: false,
-    style: sans(15.5, c: palette.text, w: FontWeight.w400),
-    cursorColor: palette.accent,
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: sans(14, c: palette.textSoft),
-      filled: true,
-      fillColor: palette.text.withValues(alpha: .05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: palette.edge, width: .7)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: palette.accent, width: 1)),
-    ),
-  );
 }

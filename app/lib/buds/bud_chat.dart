@@ -25,7 +25,7 @@ Toolbox? _tools;
 Toolbox _budTools(Settings settings) => _tools ??= Toolbox(
   settings: settings,
   permissions: Permissions(settings),
-  browser: BrowserRunner(cloudServer: () => settings.server, cloudToken: () => settings.token),
+  browser: BrowserRunner(cloudServer: () => settings.server, cloudToken: () => settings.token, cloudCuaKey: () => settings.cuaApiKey),
   github: GitHub(settings),
 );
 
