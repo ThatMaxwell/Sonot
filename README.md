@@ -1,24 +1,66 @@
+<div align="center">
+
+<img src="assets/brand/og-image.png" alt="Sonot" width="100%">
+
 # Sonot
 
-My Best AI Work, Sonot. Made by [ThatMaxwell](https://github.com/ThatMaxwell).
+### Think in light.
 
-This repo holds the Sonot launch & download site, built with **Flutter** (web), with **three.js** backgrounds and a soundtrack synthesized live in the browser.
+**One AI family that reads, reasons, writes, codes, sees and speaks.**
+Built for the machines you actually use: **Windows**, **Android** and **Linux**.
 
-## The experience
+[Website](https://thatmaxwell.github.io/Sonot/) · [Made by ThatMaxwell](https://github.com/ThatMaxwell)
 
-1. **Language** — English or Português, the very first screen (no branding yet). Remembered; switch anytime with the EN/PT button.
-2. **Loader** — exactly 3 seconds: the petals fly in and the icon forms around them.
-3. **Launch film, "Ignition"** — 45 seconds, one continuous real-time 3D shot (three.js): a single particle system becomes a point of light, sparks, a vortex, implodes, explodes into the Sonot bloom on the drop, writes SONOT and the six talents in light, draws a laptop and a phone, warps through hyperspace past people's questions, and lands as the app icon. Scored with an uplifting 128 BPM cinematic electronic track in D major that builds the hype without the noise (the film's clock *is* the music). Esc skips, M mutes.
-4. **The site** — white + electric blue, black for contrast:
-   hero with a 3D glass bloom (three.js) · crossing marquee bands · manifesto over a petal galaxy (three.js) · pinned desktop app on Windows / Linux · fanned Android phones · talents bento with live tiles · sideways people carousel · interactive "ask it something hard" demo · electric-blue download section over particle waves (three.js) · footer.
+`Windows` · `Android` · `Linux`
+
+</div>
+
+---
+
+## The Sonot family
+
+Three apps, one mind. Each one is built for a different side of your day.
+
+| App | What it is | Status |
+|---|---|---|
+| **Sonot** | The assistant. Ask anything, think out loud, write, plan and learn, in a chat that feels fast and personal. | Coming soon |
+| **Sonot Buds** | Companions with personality. Characters you can talk to, laugh with and come back to, with their own voices and styles. | Coming soon |
+| **Sonot Code** | The flagship. An agentic coding partner that works where you work: GitHub, your terminal, a built-in browser and your desktop. | Coming soon |
+
+> **Where things stand:** this repository is home to the official Sonot launch site, which is live today. The apps are in active development, and nothing above ships until it's ready. Star the repo to follow along.
+
+## Made for your screens
+
+Sonot is designed first for **Windows**, with **Android** and **Linux** right alongside it. Every app shares one design language, white and electric blue, so moving from your desktop to your phone feels like one continuous conversation.
+
+## The launch site
+
+The site is more than a download page. It's an experience.
+
+- **"Ignition", the launch film.** A 45-second, real-time 3D shot built in three.js: one particle system becomes a spark, a vortex and an explosion into the Sonot bloom, all locked to an original 128 BPM soundtrack synthesized live in your browser.
+- **Interactive from top to bottom.** A 3D glass bloom, a petal galaxy, a pinned desktop showcase for Windows and Linux, fanned Android phones, live talent tiles and an "ask it something hard" preview.
+- **Bilingual from the first second.** English and Português, chosen on the very first screen and remembered after that.
+
+---
+
+## For developers
+
+The site is built with **Flutter** (web), **three.js** and **WebAudio**.
+
+### The experience, step by step
+
+1. **Language:** English or Português, the very first screen (no branding yet). Remembered; switch anytime with the EN/PT button.
+2. **Loader:** exactly 3 seconds. The petals fly in and the icon forms around them.
+3. **Launch film:** Esc skips, M mutes. The film's clock *is* the music.
+4. **The site:** hero, marquee bands, manifesto, desktop app on Windows / Linux, Android phones, talents, people, "try it" demo, download section and footer.
 
 URL flags: `?film` always plays the film, `?nofilm` skips it, `?reset` forgets everything (language, film seen, mute).
 
-## Publish (GitHub Pages)
+### Publish (GitHub Pages)
 
 The compiled site lives in **`docs/`**. In **Settings → Pages**, choose *Deploy from a branch* → `main` with either `/ (root)` (a small `index.html` forwards to `docs/`) or `/docs`. Both work.
 
-## Edit & rebuild
+### Edit & rebuild
 
 Requires the [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.38+).
 
@@ -33,7 +75,7 @@ flutter build web --release --no-web-resources-cdn -o docs
 - **Download links & film behaviour:** `lib/core/config.dart`
 - **All text (English + Portuguese):** `lib/core/i18n.dart`
 
-## Code map
+### Code map
 
 ```
 lib/main.dart              language → loader → film → site
