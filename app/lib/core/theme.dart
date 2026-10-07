@@ -73,17 +73,18 @@ class Palette {
     watermark: Color(0x330B5CFF),
   );
 
+  /// Code: flat near-black grey, no glow, and the Sonot mark at full strength.
   static const code = Palette(
-    bg: Color(0xFF05060B),
-    blobs: [Color(0x590029C9), Color(0x333A2FBF), Color(0x400B5CFF), Color(0x1F6EA2FF)],
-    text: Color(0xFFE8ECF7),
-    textSoft: Color(0xFF7E87A6),
+    bg: Color(0xFF0E0E0F),
+    blobs: [Color(0x000E0E0F), Color(0x000E0E0F), Color(0x000E0E0F), Color(0x000E0E0F)],
+    text: Color(0xFFEDEDED),
+    textSoft: Color(0xFF8C8C92),
     accent: C.blueSoft,
     onAccent: C.ink,
-    glass: Color(0x0FFFFFFF),
-    edge: Color(0x24FFFFFF),
+    glass: Color(0x12FFFFFF),
+    edge: Color(0x26FFFFFF),
     userGlass: Color(0x1FFFFFFF),
-    watermark: Color(0x1A6EA2FF),
+    watermark: C.blue,
   );
 
   static Palette of(Mode m) => m == Mode.code ? code : chat;

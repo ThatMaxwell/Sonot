@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/models.dart';
 import '../core/theme.dart';
+import 'bloom.dart';
 import 'glass.dart';
 
 /// The small "Somedin · Medium" chip in the composer.
@@ -30,7 +33,10 @@ class ModelChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(short, style: sans(13.5, c: p.text, w: FontWeight.w600, h: 1)),
+                Text(
+                  short,
+                  style: sans(13.5, c: p.text, w: FontWeight.w600, h: 1),
+                ),
                 const SizedBox(width: 7),
                 EffortBars(level: effort.index, color: p.accent, track: p.textSoft.withValues(alpha: .3)),
               ],
@@ -93,21 +99,40 @@ class _Picker extends StatefulWidget {
   State<_Picker> createState() => _PickerState();
 }
 
-class _PickerState extends State<_Picker> {
+class _PickerState extends State<_Picker> with SingleTickerProviderStateMixin {
   late Tier _tier = widget.tier;
   late Effort _effort = widget.effort;
+  late final _hype = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+
+  static bool _maxed(Tier t, Effort e) => t.id == 'anthem' && e == Effort.max;
+
+  @override
+  void dispose() {
+    _hype.dispose();
+    super.dispose();
+  }
+
+  /// Anthem on Max: a burst of the Sonot mark and a short double buzz.
+  Future<void> _celebrate() async {
+    _hype.forward(from: 0);
+    await HapticFeedback.heavyImpact();
+    await Future<void>.delayed(const Duration(milliseconds: 110));
+    await HapticFeedback.mediumImpact();
+  }
 
   void _set({Tier? tier, Effort? effort}) {
     final t = tier ?? _tier;
     // Keep the effort the user chose when the new tier allows it, else the nearest stop.
     final e = t.clamp(effort ?? _effort);
     if (t == _tier && e == _effort) return;
-    HapticFeedback.selectionClick();
+    final hype = _maxed(t, e) && !_maxed(_tier, _effort);
+    if (!hype) HapticFeedback.selectionClick();
     setState(() {
       _tier = t;
       _effort = e;
     });
     widget.onChanged(_tier, _effort);
+    if (hype) _celebrate();
   }
 
   @override
@@ -119,26 +144,41 @@ class _PickerState extends State<_Picker> {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: Glass(
-            radius: 30,
-            blur: 30,
-            fill: Color.alphaBlend(p.glass, p.bg.withValues(alpha: .6)),
-            edge: p.edge,
-            padding: const EdgeInsets.fromLTRB(10, 18, 10, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _label('Model', p),
-                for (final t in tiers) _tierRow(t, p),
-                const SizedBox(height: 14),
-                _label('Effort', p),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _EffortSlider(value: _effort, allowed: _tier.efforts, palette: p, onChanged: (e) => _set(effort: e)),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Glass(
+                radius: 30,
+                blur: 30,
+                fill: Color.alphaBlend(p.glass, p.bg.withValues(alpha: .6)),
+                edge: p.edge,
+                padding: const EdgeInsets.fromLTRB(10, 18, 10, 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _label('Model', p),
+                    for (final t in tiers) _tierRow(t, p),
+                    const SizedBox(height: 14),
+                    _label('Effort', p),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _EffortSlider(
+                        value: _effort,
+                        allowed: _tier.efforts,
+                        palette: p,
+                        onChanged: (e) => _set(effort: e),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: _Hype(animation: _hype, palette: p),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -147,7 +187,10 @@ class _PickerState extends State<_Picker> {
 
   Widget _label(String text, Palette p) => Padding(
     padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-    child: Text(text.toUpperCase(), style: mono(11.5, c: p.textSoft, w: FontWeight.w500)),
+    child: Text(
+      text.toUpperCase(),
+      style: mono(11.5, c: p.textSoft, w: FontWeight.w500),
+    ),
   );
 
   Widget _tierRow(Tier t, Palette p) {
@@ -173,9 +216,15 @@ class _PickerState extends State<_Picker> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(t.name, style: sans(16, c: p.text, w: FontWeight.w600)),
+                    Text(
+                      t.name,
+                      style: sans(16, c: p.text, w: FontWeight.w600),
+                    ),
                     const SizedBox(height: 2),
-                    Text(t.blurb, style: sans(13.5, c: p.textSoft, w: FontWeight.w400)),
+                    Text(
+                      t.blurb,
+                      style: sans(13.5, c: p.textSoft, w: FontWeight.w400),
+                    ),
                   ],
                 ),
               ),
@@ -222,7 +271,10 @@ class _EffortSlider extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   clipBehavior: Clip.none,
                   children: [
-                    Container(height: 6, decoration: BoxDecoration(color: p.text.withValues(alpha: .08), borderRadius: BorderRadius.circular(3))),
+                    Container(
+                      height: 6,
+                      decoration: BoxDecoration(color: p.text.withValues(alpha: .08), borderRadius: BorderRadius.circular(3)),
+                    ),
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOutCubic,
@@ -285,7 +337,11 @@ class _EffortSlider extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Text(value.blurb, style: sans(13.5, c: p.textSoft, w: FontWeight.w400), textAlign: TextAlign.center),
+            Text(
+              value.blurb,
+              style: sans(13.5, c: p.textSoft, w: FontWeight.w400),
+              textAlign: TextAlign.center,
+            ),
             if (allowed.length < Effort.values.length)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -300,4 +356,94 @@ class _EffortSlider extends StatelessWidget {
       },
     );
   }
+}
+
+/// The Anthem-on-Max burst: the Sonot mark punches in and spins, sparks fly
+/// out, and "MAX" stamps over it, then it all fades.
+class _Hype extends AnimatedWidget {
+  const _Hype({required Animation<double> animation, required this.palette}) : super(listenable: animation);
+  final Palette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = (listenable as Animation<double>).value;
+    if (t == 0 || t == 1) return const SizedBox.shrink();
+    final fade = t < .75 ? 1.0 : 1 - (t - .75) / .25;
+    final pop = Curves.elasticOut.transform((t / .55).clamp(0, 1));
+    final accent = palette.accent;
+    return Opacity(
+      opacity: fade,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(child: ColoredBox(color: palette.bg.withValues(alpha: .8))),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      accent.withValues(alpha: .35 * (1 - t)),
+                      accent.withValues(alpha: 0),
+                    ],
+                    radius: .9,
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(child: CustomPaint(painter: _Sparks(t, accent))),
+            Transform.rotate(
+              angle: t * math.pi * 1.5,
+              child: Transform.scale(
+                scale: .3 + pop * .9,
+                child: SonotMark(size: 120, color: accent),
+              ),
+            ),
+            Transform.scale(
+              scale: 1.6 - .6 * Curves.easeOutBack.transform((t / .4).clamp(0, 1)),
+              child: Opacity(
+                opacity: (t / .2).clamp(0, 1),
+                child: Text(
+                  'MAX',
+                  style: toy(54, c: Colors.white).copyWith(
+                    letterSpacing: 2,
+                    shadows: [
+                      Shadow(color: accent, blurRadius: 24),
+                      Shadow(color: accent.withValues(alpha: .8), blurRadius: 6),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Sparks extends CustomPainter {
+  _Sparks(this.t, this.color);
+  final double t;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final travel = Curves.easeOutCubic.transform(t) * size.shortestSide * .75;
+    final paint = Paint()..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 18; i++) {
+      final a = i / 18 * math.pi * 2 + (i.isEven ? .1 : -.1);
+      final d = travel * (i.isEven ? 1 : .7);
+      final dir = Offset(math.cos(a), math.sin(a));
+      paint
+        ..color = (i % 3 == 0 ? Colors.white : color).withValues(alpha: (1 - t).clamp(0, 1))
+        ..strokeWidth = i.isEven ? 3 : 2;
+      canvas.drawLine(c + dir * (d * .55), c + dir * d, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Sparks o) => o.t != t;
 }
