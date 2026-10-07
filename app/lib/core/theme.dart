@@ -23,6 +23,7 @@ class F {
   static const sans = 'InterTight';
   static const serif = 'InstrumentSerif';
   static const mono = 'JetBrainsMono';
+  static const toy = 'Fredoka';
 }
 
 /// The moods of the app. Chat and Buds are the site's white and blue; Code
@@ -106,6 +107,15 @@ TextStyle sans(double size, {FontWeight w = FontWeight.w500, Color c = C.ink, do
 
 TextStyle serif(double size, {Color c = C.ink, double h = 1.1}) =>
     TextStyle(fontFamily: F.serif, fontStyle: FontStyle.italic, fontSize: size, color: c, height: h, fontWeight: FontWeight.w400);
+
+/// Fredoka, a round toy-like face, used for the word "buds".
+TextStyle toy(double size, {Color c = C.ink, double weight = 600, double h = 1.1}) => TextStyle(
+  fontFamily: F.toy,
+  fontSize: size,
+  color: c,
+  height: h,
+  fontVariations: [FontVariation('wght', weight)],
+);
 
 /// Mono with ligatures off, so code shows exactly what was typed (`<=`, not `≤`).
 TextStyle mono(double size, {Color c = C.mute, FontWeight w = FontWeight.w400, double h = 1.5}) => TextStyle(

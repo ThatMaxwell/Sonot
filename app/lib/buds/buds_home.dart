@@ -36,7 +36,7 @@ class BudsHome extends StatelessWidget {
                         TextSpan(
                           children: [
                             TextSpan(text: 'Your ', style: sans(34, c: p.text, w: FontWeight.w700, ls: -.03, h: 1.1)),
-                            TextSpan(text: 'Buds', style: serif(38, c: p.accent, h: 1.1)),
+                            TextSpan(text: 'buds', style: toy(37, c: p.accent)),
                           ],
                         ),
                       ),

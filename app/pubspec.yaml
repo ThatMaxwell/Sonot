@@ -39,6 +39,9 @@ flutter:
         - asset: assets/fonts/InstrumentSerif-400.ttf
         - asset: assets/fonts/InstrumentSerif-400-italic.ttf
           style: italic
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka.ttf
     - family: JetBrainsMono
       fonts:
         - asset: assets/fonts/JetBrainsMono-400.ttf
