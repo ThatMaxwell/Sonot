@@ -3,6 +3,13 @@ import 'package:flutter/services.dart';
 
 import '../buds/buds.dart';
 import '../buds/buds_home.dart';
+import '../code/agent.dart';
+import '../code/browser.dart';
+import '../code/code_ui.dart';
+import '../code/github.dart';
+import '../code/notify.dart';
+import '../code/permissions.dart';
+import '../code/tools.dart';
 import '../core/api.dart';
 import '../core/conversation.dart';
 import '../core/models.dart';
@@ -33,8 +40,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   late final Animation<double> _mood = CurvedAnimation(parent: _moodCtl, curve: Curves.easeInOutCubic);
   Palette _from = Palette.chat;
 
+  /// Sonot Code's hands: commands, Node.js, files, the browser, GitHub.
+  late final _github = GitHub(widget.settings);
+  late final _permissions = Permissions(widget.settings);
+  late final _browser = BrowserRunner(cloudServer: () => widget.settings.server, cloudToken: () => widget.settings.token);
+  late final _toolbox = Toolbox(settings: widget.settings, permissions: _permissions, browser: _browser, github: _github);
+
   /// Each mode keeps its own conversation and model; Code starts on the strongest.
-  final Map<Mode, Conversation> _threads = {Mode.chat: Conversation(), Mode.code: Conversation()};
+  late final Map<Mode, Conversation> _threads = {Mode.chat: Conversation(), Mode.code: CodeAgent(_toolbox)};
   late final Map<Mode, (Tier, Effort)> _models = {for (final m in Mode.values) m: widget.settings.modelFor(m)};
   Conversation get _convo => _threads[_mode] ?? _threads[Mode.chat]!;
   Tier get _tier => _models[_mode]!.$1;
@@ -51,6 +64,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     for (final c in _threads.values) {
       c.addListener(_onConvo);
     }
+    _permissions.onAsk = (ask) async {
+      if (!mounted) return Approval.deny;
+      final a = await showApproval(context, _palette, ask, onOpen: (close) => _permissions.cancelAsk = close);
+      _permissions.cancelAsk = null;
+      return a;
+    };
     _input.addListener(() {
       final typing = _input.text.trim().isNotEmpty;
       if (typing != _typing) setState(() => _typing = typing);
@@ -68,6 +87,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     for (final c in _threads.values) {
       c.dispose();
     }
+    _toolbox.shell.killAll();
+    _browser.dispose();
     _moodCtl.dispose();
     _input.dispose();
     _focus.dispose();
@@ -79,7 +100,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   void _setMode(Mode m) {
     if (m == _mode) return;
-    _convo.stop();
+    // Code keeps working in the background; only plain chat stops on switch.
+    if (_mode != Mode.code) _convo.stop();
+    if (m == Mode.code) Notifier.instance.init();
     _from = _palette;
     setState(() => _mode = m);
     _moodCtl.forward(from: 0);
@@ -186,7 +209,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         controller: _input,
                         focus: _focus,
                         palette: p,
-                        hint: _mode == Mode.code ? 'Describe the code task…' : 'Ask Sonot anything',
+                        hint: _mode == Mode.code ? 'Build, run, browse, ship…' : 'Ask Sonot anything',
                         monoInput: _mode == Mode.code,
                         busy: _convo.busy,
                         onSend: _send,
@@ -223,9 +246,21 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
+          // Code's tools button, mirrored by an empty slot on the right so the switch stays centred.
+          _codeSlot(
+            GlassIconButton(
+              icon: Icons.terminal_rounded,
+              tooltip: 'Code settings',
+              onTap: () => showCodeSettings(context, p, widget.settings, _github),
+              color: p.text,
+              fill: p.glass,
+              edge: p.edge,
+            ),
+          ),
           const Spacer(),
           _ModeSwitch(mode: _mode, palette: p, onChanged: _setMode),
           const Spacer(),
+          _codeSlot(const SizedBox.square(dimension: 44)),
           GlassIconButton(
             icon: Icons.tune_rounded,
             tooltip: 'Settings',
@@ -238,6 +273,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       ),
     );
   }
+
+  Widget _codeSlot(Widget child) => AnimatedSize(
+    duration: const Duration(milliseconds: 260),
+    curve: Curves.easeOutCubic,
+    child: _mode == Mode.code ? Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: child) : const SizedBox(height: 44),
+  );
 
   Future<void> _openSettings(Palette p) async {
     final st = widget.settings;

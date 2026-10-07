@@ -150,7 +150,7 @@ class ThreadView extends StatelessWidget {
               message: m,
               palette: palette,
               mode: mode,
-              waiting: identical(m, streaming) && m.text.isEmpty,
+              waiting: identical(m, streaming) && m.text.isEmpty && m.steps.isEmpty,
               waitingWidget: waiting,
             );
           },

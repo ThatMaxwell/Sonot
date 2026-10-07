@@ -21,6 +21,7 @@
  */
 import http from "node:http";
 import Anthropic from "@anthropic-ai/sdk";
+import { browserMode, handleBrowser } from "./browser.ts";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -210,11 +211,21 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === "POST" && url.pathname === "/v1/browser") {
+    if (!authorized(req)) return sendJson(res, 401, { error: "Missing or wrong app token." });
+    readBody(req)
+      .then((raw) => handleBrowser(req, res, JSON.parse(raw), cors))
+      .catch((e) => {
+        if (!res.headersSent) sendJson(res, 400, { error: e instanceof SyntaxError ? "Invalid JSON." : String((e as Error).message) });
+        else res.end();
+      });
+    return;
+  }
   sendJson(res, 404, { error: "Not found." });
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Sonot server on http://${HOST}:${PORT} (model ${MODEL}, effort ${EFFORT})`);
+  console.log(`Sonot server on http://${HOST}:${PORT} (model ${MODEL}, effort ${EFFORT}; browser: ${browserMode()})`);
   if (!process.env.ANTHROPIC_API_KEY) console.warn("Warning: ANTHROPIC_API_KEY is not set; chats will fail.");
   if (!APP_TOKEN) console.warn("Note: SONOT_APP_TOKEN is not set; anyone who can reach this port can chat.");
 });

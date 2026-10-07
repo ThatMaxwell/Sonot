@@ -43,7 +43,7 @@ void main() {
     expect(find.text('Ask Sonot anything'), findsOneWidget);
     await tester.tap(find.text('Code'));
     await tester.pumpAndSettle();
-    expect(find.text('Describe the code task…'), findsOneWidget);
+    expect(find.text('Build, run, browse, ship…'), findsOneWidget);
   });
 
   testWidgets('the Buds tab shows the starter Buds', (tester) async {

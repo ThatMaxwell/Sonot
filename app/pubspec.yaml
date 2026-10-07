@@ -7,9 +7,12 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
+  file_selector: ^1.1.0
   flutter:
     sdk: flutter
+  flutter_local_notifications: ^22.3.1
   http: ^1.2.0
+  path_provider: ^2.1.6
   shared_preferences: ^2.3.0
   url_launcher: ^6.3.3
 
@@ -20,6 +23,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/helpers/sonot_browser.py
 
   fonts:
     - family: InterTight

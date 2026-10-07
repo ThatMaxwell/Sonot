@@ -19,4 +19,15 @@ In the app: **Use my own server**, then your PC's address (for example `192.168.
 | `SONOT_MODEL` | `claude-opus-5-5` | used when the app's tier isn't a Claude model |
 | `SONOT_EFFORT` | `medium` | default effort |
 
+### Cloud browsing for Sonot Code
+
+Phones can't run a browser for the agent, so Sonot Code on Android sends browser tasks here: `POST /v1/browser` with `{task, token, model}` streams the same events the desktop helper emits. The server runs [`app/assets/helpers/sonot_browser.py`](../app/assets/helpers/sonot_browser.py) with [uv](https://docs.astral.sh/uv/) (install it first). The task's AI calls use the phone user's own Puter token.
+
+| Variable | |
+|---|---|
+| `CUA_API_KEY`, or `CUA_CLIENT_ID` + `CUA_CLIENT_SECRET` | the browser runs on a [cua.ai](https://cua.ai) cloud computer. Without them it runs headless on this machine. |
+| `SONOT_BROWSER_NO_SANDBOX=1` | needed when the server runs as root (Docker). |
+
+One helper (and one cloud computer) is shared by everyone using this server, so keep it to people you trust.
+
 API: `POST /v1/chat` with `{mode, model, effort, messages}` returns Server-Sent Events (`delta`, then `done` or `error`). `GET /health` for a check. Needs Node 22.18+ (runs the TypeScript directly).
