@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -234,9 +233,9 @@ class _FilmPlayerState extends State<FilmPlayer> with TickerProviderStateMixin {
           opacity: v * o,
           child: Transform.scale(
             scale: lerpD(1.25, 1, v) + local * .04,
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: (1 - v) * 14, sigmaY: (1 - v) * 14),
-              child: Text('“${prompts[i]}”', textAlign: TextAlign.center, style: sans(big * 1.05, w: FontWeight.w700, c: C.white, ls: -.035, h: 1.08)),
+            child: softBlur(
+              (1 - v) * 14,
+              Text('“${prompts[i]}”', textAlign: TextAlign.center, style: sans(big * 1.05, w: FontWeight.w700, c: C.white, ls: -.035, h: 1.08)),
             ),
           ),
         ),
@@ -356,10 +355,7 @@ class _Words extends StatelessWidget {
             opacity: p,
             child: Transform.translate(
               offset: Offset(0, (1 - p) * style.fontSize! * .35),
-              child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(sigmaX: (1 - p) * 10, sigmaY: (1 - p) * 10),
-                child: Text(words[i].$1, style: st),
-              ),
+              child: softBlur((1 - p) * 10, Text(words[i].$1, style: st)),
             ),
           );
         }),

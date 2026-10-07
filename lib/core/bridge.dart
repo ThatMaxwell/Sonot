@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:web/web.dart' as web;
 
+/// Set in web/index.html: true on phones, tablets and low-core machines.
+@JS('sonotLite')
+external JSBoolean? get _sonotLite;
+
 /* ---------------- Audio (web/js/audio.js) ---------------- */
 @JS('sonotAudio')
 external _Audio? get _audio;
@@ -154,6 +158,9 @@ class Browser {
     if (RegExp('Linux|X11|CrOS').hasMatch(plat + ua)) return 'linux';
     return 'win';
   }
+
+  /// Phones, tablets and low-core machines: same effects, lighter versions.
+  static final bool lite = _sonotLite?.toDart ?? false;
 
   static bool get reducedMotion => web.window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

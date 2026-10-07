@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import '../core/bridge.dart';
 import '../core/theme.dart';
 
 /* ==========================================================================
@@ -218,16 +219,22 @@ class _RevealState extends State<Reveal> with SingleTickerProviderStateMixin {
             offset: Offset(0, (1 - v) * widget.dy),
             child: Transform.scale(scale: lerpD(widget.scale, 1, v), child: child),
           );
-          if (b > .3)
-            w = ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: b, sigmaY: b),
-              child: w,
-            );
+          w = softBlur(b, w);
           return Opacity(opacity: v, child: w);
         },
       ),
     );
   }
+}
+
+/// Blur used by entrances. Phones skip it (a full-layer blur every frame is
+/// the most expensive thing on the page there); the fade and slide stay.
+Widget softBlur(double sigma, Widget child) {
+  if (sigma <= .3 || Browser.lite) return child;
+  return ImageFiltered(
+    imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+    child: child,
+  );
 }
 
 /* ==========================================================================

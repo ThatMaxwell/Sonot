@@ -46,13 +46,15 @@
   var ctx = null, master, comp, music, duck, verb, verbIn, delayIn, noise, filt;
   var t0 = 0, step = 0, timer = null, started = false, muted = false;
 
+  var LITE = !!window.sonotLite;
   function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
 
   function build() {
     if (ctx) return true;
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
-    ctx = new AC({ latencyHint: 'interactive' });
+    // Phones get a bigger audio buffer, a shorter reverb tail and fewer stacked voices, so the music never crackles.
+    ctx = new AC({ latencyHint: LITE ? 'playback' : 'interactive' });
 
     comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = .005; comp.release.value = .2;
@@ -66,7 +68,7 @@
     music = ctx.createGain(); music.connect(duck);
 
     // big hall reverb
-    var len = ctx.sampleRate * 3.4, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    var len = ctx.sampleRate * (LITE ? 2.2 : 3.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
     for (var c = 0; c < 2; c++) {
       var d = ir.getChannelData(c);
       for (var j = 0; j < len; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / len, 2.8);
@@ -209,7 +211,7 @@
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .01);
     g.gain.setValueAtTime(v, t + dur); g.gain.exponentialRampToValueAtTime(.0008, t + dur + (rel || .12));
     f.connect(g); send(g, wet === undefined ? .25 : wet);
-    notes.forEach(function (m) { [-15, -6, 0, 7, 16].forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + (rel || .12) + .05, f, c); }); });
+    notes.forEach(function (m) { (LITE ? [-12, 0, 12] : [-15, -6, 0, 7, 16]).forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + (rel || .12) + .05, f, c); }); });
   }
   function pad(t, notes, dur, v, cut) {
     var f = ctx.createBiquadFilter(), g = ctx.createGain(); f.type = 'lowpass'; f.frequency.value = cut || 1500;
@@ -252,7 +254,7 @@
     if (Array.isArray(cut)) { f.frequency.setValueAtTime(cut[0], t); f.frequency.exponentialRampToValueAtTime(cut[1], t + dur); } else f.frequency.value = cut || 3200;
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .25); g.gain.setValueAtTime(v, t + dur - .15); g.gain.linearRampToValueAtTime(0, t + dur + .5);
     f.connect(g); send(g, .5);
-    notes.forEach(function (m) { [-11, -4, 4, 11].forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + .6, f, c); }); });
+    notes.forEach(function (m) { (LITE ? [-8, 8] : [-11, -4, 4, 11]).forEach(function (c) { osc('sawtooth', hz(m), t, t + dur + .6, f, c); }); });
   }
 
   /* ---------------- arrangement: one call per 16th step ---------------- */

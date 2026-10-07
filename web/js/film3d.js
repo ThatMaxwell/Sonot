@@ -207,7 +207,7 @@ const drums = (tb) => (tb >= 4 && tb < 7.75) || (tb >= 8 && tb < 15) || (tb >= 1
 
 /* ---------------- the scene ---------------- */
 export function filmScene(renderer) {
-  const mobile = Math.min(window.innerWidth, window.innerHeight) < 700;
+  const mobile = Math.min(window.innerWidth, window.innerHeight) < 700 || !!window.sonotLite;
   const N = mobile ? 16000 : 38000;
   const lang = (() => { try { return localStorage.getItem('sonot.lang') === 'pt' ? 'pt' : 'en'; } catch (e) { return 'en'; } })();
 
@@ -229,7 +229,7 @@ export function filmScene(renderer) {
 
   const uniforms = {
     uMix: { value: 0 }, uTime: { value: 0 }, uSize: { value: 1 }, uPulse: { value: 0 }, uScatter: { value: 0 },
-    uReveal: { value: 0 }, uRatio: { value: Math.min(2, window.devicePixelRatio || 1) }, uWarp: { value: 0 }, uTunnel: { value: 0 },
+    uReveal: { value: 0 }, uRatio: { value: renderer.getPixelRatio() }, uWarp: { value: 0 }, uTunnel: { value: 0 },
     uFlash: { value: 0 }, uOpacity: { value: 1 }, uAlphaK: { value: 1 }, uSoft: { value: 1 },
     uColA: { value: new THREE.Color() }, uColB: { value: new THREE.Color() }, uColC: { value: new THREE.Color() },
   };
@@ -304,7 +304,7 @@ export function filmScene(renderer) {
   return {
     scene, camera, mobile,
     set(v) { t = v; },
-    resize(w, h) { composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); },
+    resize(w, h) { composer.setSize(w, h); bloom.resolution.set(w / (mobile ? 4 : 2), h / (mobile ? 4 : 2)); },
     render() { composer.render(); },
     tick(_, dt) {
       if (t === last && t > 0) { /* paused: keep idle shimmer */ }

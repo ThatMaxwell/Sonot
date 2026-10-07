@@ -162,13 +162,13 @@ class _Nav extends StatelessWidget {
             children: [
               ClipRect(
                 child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: scrolled ? 18 : 0, sigmaY: scrolled ? 18 : 0),
+                  filter: ui.ImageFilter.blur(sigmaX: scrolled && !Browser.lite ? 18 : 0, sigmaY: scrolled && !Browser.lite ? 18 : 0),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     height: 68,
                     padding: const EdgeInsets.symmetric(horizontal: 22),
                     decoration: BoxDecoration(
-                      color: C.white.withValues(alpha: scrolled ? .78 : 0),
+                      color: C.white.withValues(alpha: scrolled ? (Browser.lite ? .95 : .78) : 0),
                       border: Border(bottom: BorderSide(color: scrolled ? C.line : const Color(0x00FFFFFF))),
                     ),
                     child: Row(
@@ -448,9 +448,9 @@ class _HeroState extends State<_Hero> with SingleTickerProviderStateMixin {
     final v = Curves.easeOutCubic.transform(seg(intro.value, .22, .62));
     return Opacity(
       opacity: v,
-      child: ImageFiltered(
-        imageFilter: ui.ImageFilter.blur(sigmaX: (1 - v) * 14, sigmaY: (1 - v) * 14),
-        child: Transform.translate(
+      child: softBlur(
+        (1 - v) * 14,
+        Transform.translate(
           offset: Offset((1 - v) * -40, 0),
           child: Text.rich(
             TextSpan(
