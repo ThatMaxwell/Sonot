@@ -1,11 +1,11 @@
 import 'dart:math' as math;
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/models.dart';
 import '../core/theme.dart';
-import 'bloom.dart';
 import 'glass.dart';
 
 /// The small "Somedin · Medium" chip in the composer.
@@ -102,22 +102,22 @@ class _Picker extends StatefulWidget {
 class _PickerState extends State<_Picker> with SingleTickerProviderStateMixin {
   late Tier _tier = widget.tier;
   late Effort _effort = widget.effort;
-  late final _hype = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+  late final _max = AnimationController(vsync: this, duration: const Duration(milliseconds: 1150));
 
   static bool _maxed(Tier t, Effort e) => t.id == 'anthem' && e == Effort.max;
 
   @override
   void dispose() {
-    _hype.dispose();
+    _max.dispose();
     super.dispose();
   }
 
-  /// Anthem on Max: a burst of the Sonot mark and a short double buzz.
-  Future<void> _celebrate() async {
-    _hype.forward(from: 0);
-    await HapticFeedback.heavyImpact();
-    await Future<void>.delayed(const Duration(milliseconds: 110));
-    await HapticFeedback.mediumImpact();
+  /// Anthem on Max: one firm haptic, then a single line of light runs the
+  /// effort track and once around the panel's edge while the panel settles.
+  void _engageMax() {
+    HapticFeedback.heavyImpact();
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    _max.forward(from: 0);
   }
 
   void _set({Tier? tier, Effort? effort}) {
@@ -125,14 +125,14 @@ class _PickerState extends State<_Picker> with SingleTickerProviderStateMixin {
     // Keep the effort the user chose when the new tier allows it, else the nearest stop.
     final e = t.clamp(effort ?? _effort);
     if (t == _tier && e == _effort) return;
-    final hype = _maxed(t, e) && !_maxed(_tier, _effort);
-    if (!hype) HapticFeedback.selectionClick();
+    final engage = _maxed(t, e) && !_maxed(_tier, _effort);
+    if (!engage) HapticFeedback.selectionClick();
     setState(() {
       _tier = t;
       _effort = e;
     });
     widget.onChanged(_tier, _effort);
-    if (hype) _celebrate();
+    if (engage) _engageMax();
   }
 
   @override
@@ -144,41 +144,43 @@ class _PickerState extends State<_Picker> with SingleTickerProviderStateMixin {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Glass(
-                radius: 30,
-                blur: 30,
-                fill: Color.alphaBlend(p.glass, p.bg.withValues(alpha: .6)),
-                edge: p.edge,
-                padding: const EdgeInsets.fromLTRB(10, 18, 10, 18),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _label('Model', p),
-                    for (final t in tiers) _tierRow(t, p),
-                    const SizedBox(height: 14),
-                    _label('Effort', p),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: _EffortSlider(
-                        value: _effort,
-                        allowed: _tier.efforts,
-                        palette: p,
-                        onChanged: (e) => _set(effort: e),
+          child: _Settle(
+            animation: _max,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Glass(
+                  radius: 30,
+                  blur: 30,
+                  fill: Color.alphaBlend(p.glass, p.bg.withValues(alpha: .6)),
+                  edge: p.edge,
+                  padding: const EdgeInsets.fromLTRB(10, 18, 10, 18),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _label('Model', p),
+                      for (final t in tiers) _tierRow(t, p),
+                      const SizedBox(height: 14),
+                      _label('Effort', p),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: _EffortSlider(
+                          value: _effort,
+                          allowed: _tier.efforts,
+                          palette: p,
+                          sweep: _max,
+                          onChanged: (e) => _set(effort: e),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: _Hype(animation: _hype, palette: p),
+                Positioned.fill(
+                  child: IgnorePointer(child: CustomPaint(painter: _EdgeLight(_max, radius: 30))),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -243,10 +245,19 @@ class _PickerState extends State<_Picker> with SingleTickerProviderStateMixin {
 
 /// A four-stop slider: drag or tap anywhere on the track.
 class _EffortSlider extends StatelessWidget {
-  const _EffortSlider({required this.value, required this.allowed, required this.palette, required this.onChanged});
+  const _EffortSlider({
+    required this.value,
+    required this.allowed,
+    required this.palette,
+    required this.sweep,
+    required this.onChanged,
+  });
   final Effort value;
   final Set<Effort> allowed;
   final Palette palette;
+
+  /// Runs 0 → 1 when Max is engaged; draws the light across the track.
+  final Animation<double> sweep;
   final ValueChanged<Effort> onChanged;
 
   @override
@@ -284,6 +295,12 @@ class _EffortSlider extends StatelessWidget {
                         gradient: LinearGradient(colors: [p.accent.withValues(alpha: .55), p.accent]),
                         borderRadius: BorderRadius.circular(3),
                       ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      width: x.clamp(6, w),
+                      height: 6,
+                      child: _TrackLight(animation: sweep),
                     ),
                     for (var i = 0; i < n; i++)
                       Positioned(
@@ -358,92 +375,134 @@ class _EffortSlider extends StatelessWidget {
   }
 }
 
-/// The Anthem-on-Max burst: the Sonot mark punches in and spins, sparks fly
-/// out, and "MAX" stamps over it, then it all fades.
-class _Hype extends AnimatedWidget {
-  const _Hype({required Animation<double> animation, required this.palette}) : super(listenable: animation);
-  final Palette palette;
+/// Anthem on Max, part 1: the panel settles back a hair (≈0.8 %) and returns,
+/// like a precise mechanism locking in.
+class _Settle extends AnimatedWidget {
+  const _Settle({required Animation<double> animation, required this.child}) : super(listenable: animation);
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final t = (listenable as Animation<double>).value;
-    if (t == 0 || t == 1) return const SizedBox.shrink();
-    final fade = t < .75 ? 1.0 : 1 - (t - .75) / .25;
-    final pop = Curves.elasticOut.transform((t / .55).clamp(0, 1));
-    final accent = palette.accent;
-    return Opacity(
-      opacity: fade,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(child: ColoredBox(color: palette.bg.withValues(alpha: .8))),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    colors: [
-                      accent.withValues(alpha: .35 * (1 - t)),
-                      accent.withValues(alpha: 0),
-                    ],
-                    radius: .9,
+    final dip = t <= 0 || t >= 1 ? 0.0 : math.sin(math.pi * Curves.easeOutCubic.transform((t / .42).clamp(0, 1)));
+    return Transform.scale(scale: 1 - .008 * dip, child: child);
+  }
+}
+
+/// Anthem on Max, part 2: a narrow band of white light crosses the filled
+/// effort track, left to right.
+class _TrackLight extends AnimatedWidget {
+  const _TrackLight({required Animation<double> animation}) : super(listenable: animation);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = (listenable as Animation<double>).value;
+    final k = (t / .5).clamp(0.0, 1.0);
+    if (k <= 0 || k >= 1) return const SizedBox.shrink();
+    final c = Curves.easeInOutCubic.transform(k);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          const band = 56.0;
+          return Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              Positioned(
+                left: -band + (box.maxWidth + band) * c,
+                width: band,
+                top: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0),
+                        Colors.white.withValues(alpha: .9),
+                        Colors.white.withValues(alpha: 0),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned.fill(child: CustomPaint(painter: _Sparks(t, accent))),
-            Transform.rotate(
-              angle: t * math.pi * 1.5,
-              child: Transform.scale(
-                scale: .3 + pop * .9,
-                child: SonotMark(size: 120, color: accent),
-              ),
-            ),
-            Transform.scale(
-              scale: 1.6 - .6 * Curves.easeOutBack.transform((t / .4).clamp(0, 1)),
-              child: Opacity(
-                opacity: (t / .2).clamp(0, 1),
-                child: Text(
-                  'MAX',
-                  style: toy(54, c: Colors.white).copyWith(
-                    letterSpacing: 2,
-                    shadows: [
-                      Shadow(color: accent, blurRadius: 24),
-                      Shadow(color: accent.withValues(alpha: .8), blurRadius: 6),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _Sparks extends CustomPainter {
-  _Sparks(this.t, this.color);
-  final double t;
-  final Color color;
+/// Anthem on Max, part 3: a single hairline of light travels once around the
+/// panel's edge (from the effort slider, clockwise), with a soft tail, while
+/// the whole edge brightens slightly and settles back.
+class _EdgeLight extends CustomPainter {
+  _EdgeLight(this.animation, {required this.radius}) : super(repaint: animation);
+  final Animation<double> animation;
+  final double radius;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final travel = Curves.easeOutCubic.transform(t) * size.shortestSide * .75;
-    final paint = Paint()..strokeCap = StrokeCap.round;
-    for (var i = 0; i < 18; i++) {
-      final a = i / 18 * math.pi * 2 + (i.isEven ? .1 : -.1);
-      final d = travel * (i.isEven ? 1 : .7);
-      final dir = Offset(math.cos(a), math.sin(a));
+    final t = animation.value;
+    if (t <= 0 || t >= 1) return;
+    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)).deflate(.35);
+    final metric = (Path()..addRRect(rrect)).computeMetrics().first;
+    final len = metric.length;
+
+    // Whole edge: a quiet lift and release.
+    final lift = math.sin(math.pi * t) * .22;
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = .7
+        ..color = Colors.white.withValues(alpha: lift),
+    );
+
+    // The travelling light picks up where the track light ends (the Max
+    // thumb, bottom right) and runs one lap.
+    final k = ((t - .34) / .62).clamp(0.0, 1.0);
+    if (k <= 0) return;
+    final run = Curves.easeInOutCubic.transform(k);
+    final fade = k < .82 ? 1.0 : 1 - (k - .82) / .18;
+    final head = (_offsetNear(metric, Offset(size.width - radius, size.height)) + run * len) % len;
+    final tail = len * .24;
+    const steps = 28;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < steps; i++) {
+      final a = i / steps, b = (i + 1) / steps;
+      var from = head - tail * (1 - a), to = head - tail * (1 - b);
+      from = (from + len) % len;
+      to = (to + len) % len;
       paint
-        ..color = (i % 3 == 0 ? Colors.white : color).withValues(alpha: (1 - t).clamp(0, 1))
-        ..strokeWidth = i.isEven ? 3 : 2;
-      canvas.drawLine(c + dir * (d * .55), c + dir * d, paint);
+        ..strokeWidth = .6 + 1.2 * b
+        ..color = Colors.white.withValues(alpha: (b * b) * .95 * fade);
+      if (to >= from) {
+        canvas.drawPath(metric.extractPath(from, to), paint);
+      } else {
+        canvas.drawPath(metric.extractPath(from, len), paint);
+        canvas.drawPath(metric.extractPath(0, to), paint);
+      }
     }
   }
 
+  /// Distance along [metric] of the point closest to [target].
+  static double _offsetNear(PathMetric metric, Offset target) {
+    var best = 0.0, bestD = double.infinity;
+    for (var i = 0; i < 96; i++) {
+      final d = metric.length * i / 96;
+      final pos = metric.getTangentForOffset(d)!.position;
+      final dist = (pos - target).distanceSquared;
+      if (dist < bestD) {
+        bestD = dist;
+        best = d;
+      }
+    }
+    return best;
+  }
+
   @override
-  bool shouldRepaint(_Sparks o) => o.t != t;
+  bool shouldRepaint(_EdgeLight old) => false;
 }
