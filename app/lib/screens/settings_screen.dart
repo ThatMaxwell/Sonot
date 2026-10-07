@@ -33,7 +33,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   late final _server = TextEditingController(text: st.server);
   late final _token = TextEditingController(text: st.token);
-  late final _cua = TextEditingController(text: st.cuaApiKey);
+  // cua.ai Fleet credentials: "client_id:client_secret", or a Fleet token.
+  late final _cuaId = TextEditingController(text: st.cuaApiKey.split(':').first);
+  late final _cuaSecret = TextEditingController(text: st.cuaApiKey.contains(':') ? st.cuaApiKey.substring(st.cuaApiKey.indexOf(':') + 1) : '');
   final _pat = TextEditingController();
   bool _showCua = false;
 
@@ -64,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _closed = true;
     _save();
-    for (final c in [_server, _token, _cua, _pat]) {
+    for (final c in [_server, _token, _cuaId, _cuaSecret, _pat]) {
       c.dispose();
     }
     super.dispose();
@@ -74,7 +76,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     st
       ..server = _server.text
       ..token = _token.text
-      ..cuaApiKey = _cua.text;
+      ..cuaApiKey = _cuaSecret.text.trim().isEmpty ? _cuaId.text.trim() : '${_cuaId.text.trim()}:${_cuaSecret.text.trim()}';
   }
 
   // ---- Actions ------------------------------------------------------------
@@ -109,7 +111,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             result = 'Connected. Cloud computers are ready.';
           } else if (cloud == false) {
             ok = st.cuaApiKey.isNotEmpty;
-            result = st.cuaApiKey.isEmpty ? 'Connected, but the server has no cua.ai key. Add yours above.' : 'Connected. The server will use your cua.ai key.';
+            result = st.cuaApiKey.isEmpty
+                ? 'Connected, but the server has no cua.ai keys. Add yours above.'
+                : 'Connected. The server will use your cua.ai keys.';
           } else {
             result = 'Connected to your Sonot server.';
           }
@@ -208,7 +212,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onPressed: () => Navigator.of(context).maybePop(),
                       ),
                       const SizedBox(width: 6),
-                      Text('Settings', style: sans(18, c: p.text, w: FontWeight.w700, ls: -.01)),
+                      Text(
+                        'Settings',
+                        style: sans(18, c: p.text, w: FontWeight.w700, ls: -.01),
+                      ),
                     ],
                   ),
                 ),
@@ -303,13 +310,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     children: [
       Text(
         "Buds, and Code's cloud browser, work on a cua.ai cloud computer through your Sonot server. "
-        'Bring your own cua.ai key and the computers run on your account.',
+        'Add your cua.ai client ID and secret (from the cua.ai dashboard) and the computers run on your account.',
         style: sans(13.5, c: p.textSoft, w: FontWeight.w400),
       ),
       const SizedBox(height: 14),
+      _Field(controller: _cuaId, label: 'cua.ai client ID (or a Fleet token)', palette: p, mono: true),
+      const SizedBox(height: 10),
       _Field(
-        controller: _cua,
-        label: 'cua.ai API key',
+        controller: _cuaSecret,
+        label: 'cua.ai client secret',
         palette: p,
         obscure: !_showCua,
         mono: true,
@@ -328,7 +337,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _Pill(label: _testing ? 'Testing…' : 'Test connection', palette: p, filled: true, onTap: _testing ? null : _test),
           const SizedBox(width: 10),
-          _Pill(label: 'Get a cua.ai key', palette: p, onTap: () => _open('https://cua.ai')),
+          _Pill(label: 'Get cua.ai keys', palette: p, onTap: () => _open('https://cua.ai')),
         ],
       ),
       if (_testResult != null)
@@ -353,7 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       const SizedBox(height: 10),
       Text(
-        'Your key stays in this device\'s secure keychain and is only sent to your Sonot server.',
+        'Your keys stay in this device\'s secure keychain and are only sent to your Sonot server.',
         style: sans(12.5, c: p.textSoft.withValues(alpha: .85), w: FontWeight.w400),
       ),
     ],

@@ -72,9 +72,10 @@ void main() {
       expect(find.text(s), findsOneWidget, reason: s);
     }
     expect(find.text('carrot'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'cua.ai API key'), 'sk-cua-123');
+    await tester.enterText(find.widgetWithText(TextField, 'cua.ai client ID (or a Fleet token)'), 'id-123');
+    await tester.enterText(find.widgetWithText(TextField, 'cua.ai client secret'), 'secret-456');
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
-    expect(app.settings.cuaApiKey, 'sk-cua-123');
+    expect(app.settings.cuaApiKey, 'id-123:secret-456');
   });
 }

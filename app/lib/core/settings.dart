@@ -49,8 +49,9 @@ class Settings extends ChangeNotifier {
     }
   }
 
-  /// Your own cua.ai API key for cloud computers (Buds, and Code's cloud
-  /// browser). Sent to your Sonot server as `X-Cua-Api-Key`.
+  /// Your own cua.ai credentials for cloud computers (Buds, and Code's cloud
+  /// browser): `client_id:client_secret` or a Fleet token. Sent to your Sonot
+  /// server as `X-Cua-Api-Key`.
   String get cuaApiKey => _secrets['cua.key'] ?? '';
   set cuaApiKey(String v) => _setSecret('cua.key', v);
 
