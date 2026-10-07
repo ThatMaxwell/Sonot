@@ -2,8 +2,8 @@ name: Sonot app builds
 
 # Builds the Sonot chat app for Windows, Android and Linux on every push
 # that touches app/, and attaches the files to the run (Actions > this run >
-# Artifacts). Pushing a tag like v0.1.0 also publishes them as a GitHub release
-# (0.x tags are marked as pre-releases).
+# Artifacts). Pushing a tag like v0.1.0, or running it by hand with a
+# "release" tag, also publishes them as a GitHub release (0.x = pre-release).
 on:
   push:
     paths: ["app/**", ".github/workflows/app.yml"]
@@ -14,6 +14,10 @@ on:
     inputs:
       server:
         description: "Server address to bake into the builds (optional)"
+        required: false
+        default: ""
+      release:
+        description: "Publish the builds as a release with this tag, e.g. v0.0.0 (optional)"
         required: false
         default: ""
 
@@ -108,7 +112,9 @@ jobs:
           path: app/Sonot-linux-x64.tar.gz
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    env:
+      TAG: ${{ github.event.inputs.release || github.ref_name }}
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release != ''
     needs: [windows, android, linux]
     runs-on: ubuntu-latest
     steps:
@@ -118,7 +124,9 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          name: Sonot ${{ github.ref_name }}
+          tag_name: ${{ env.TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Sonot ${{ env.TAG }}
           # 0.x releases are test builds.
-          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
+          prerelease: ${{ startsWith(env.TAG, 'v0.') }}
           files: dist/**/*
