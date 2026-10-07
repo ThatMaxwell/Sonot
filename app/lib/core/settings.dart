@@ -45,6 +45,30 @@ class Settings {
     _prefs.setString('${m.name}.effort', e.name);
   }
 
+  /// Sonot Code: the folder the agent works in. Empty means the app's own
+  /// documents folder.
+  String get workspace => _prefs.getString('code.workspace') ?? '';
+  set workspace(String v) => _prefs.setString('code.workspace', v.trim());
+
+  /// Sonot Code: things you said "Always allow" to (see code/permissions.dart).
+  List<String> get alwaysAllow => _prefs.getStringList('code.allow') ?? const [];
+  set alwaysAllow(List<String> v) => _prefs.setStringList('code.allow', v);
+
+  /// Sonot Code: 'local' runs the browser on this computer, 'cloud' on a
+  /// cua.ai cloud computer through the Sonot server. Phones are always cloud.
+  String get browserWhere => _prefs.getString('code.browser') ?? 'local';
+  set browserWhere(String v) => _prefs.setString('code.browser', v);
+
+  /// Sonot Code: GitHub sign-in (a GitHub App user token) and who it is.
+  String get githubToken => _prefs.getString('github.token') ?? '';
+  set githubToken(String v) => _prefs.setString('github.token', v);
+  String get githubRefresh => _prefs.getString('github.refresh') ?? '';
+  set githubRefresh(String v) => _prefs.setString('github.refresh', v);
+  int get githubExpires => _prefs.getInt('github.expires') ?? 0;
+  set githubExpires(int v) => _prefs.setInt('github.expires', v);
+  String get githubUser => _prefs.getString('github.user') ?? '';
+  set githubUser(String v) => _prefs.setString('github.user', v);
+
   bool get signedIn => provider == 'puter' ? puterToken.isNotEmpty : server.isNotEmpty;
 
   ChatProvider get chatProvider =>

@@ -28,6 +28,8 @@ env:
   FLUTTER_VERSION: "3.47.6"
   # Baked-in server: the dispatch input wins, then the SONOT_SERVER repo variable.
   SONOT_SERVER: ${{ github.event.inputs.server || vars.SONOT_SERVER }}
+  # Sonot Code's "Sign in with GitHub": the Sonot GitHub App's client id (not a secret).
+  SONOT_GITHUB_CLIENT_ID: ${{ vars.SONOT_GITHUB_CLIENT_ID }}
 
 defaults:
   run:
@@ -55,7 +57,7 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - run: flutter build windows --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }}
+      - run: flutter build windows --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }} --dart-define=SONOT_GITHUB_CLIENT_ID=${{ env.SONOT_GITHUB_CLIENT_ID }}
       - name: Zip the app folder
         shell: pwsh
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Sonot-windows.zip
@@ -86,7 +88,7 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - run: flutter build apk --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }}
+      - run: flutter build apk --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }} --dart-define=SONOT_GITHUB_CLIENT_ID=${{ env.SONOT_GITHUB_CLIENT_ID }}
       - run: cp build/app/outputs/flutter-apk/app-release.apk Sonot.apk
       - uses: actions/upload-artifact@v4
         with:
@@ -104,7 +106,7 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - run: flutter build linux --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }}
+      - run: flutter build linux --release --dart-define=SONOT_SERVER=${{ env.SONOT_SERVER }} --dart-define=SONOT_GITHUB_CLIENT_ID=${{ env.SONOT_GITHUB_CLIENT_ID }}
       - run: tar -czf Sonot-linux-x64.tar.gz -C build/linux/x64/release/bundle .
       - uses: actions/upload-artifact@v4
         with:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../code/code_ui.dart';
 import '../core/api.dart';
 import '../core/theme.dart';
 import 'bloom.dart';
@@ -64,19 +65,30 @@ class MessageView extends StatelessWidget {
     }
 
     final color = message.error ? const Color(0xFFE5484D) : p.text;
+    List<Widget> body(String text) => [
+      for (final part in _split(text))
+        part.code
+            ? _CodeBlock(code: part.text, lang: part.lang, palette: p)
+            : message.error
+            ? SelectableText(part.text, style: sans(16, c: color, w: FontWeight.w400, h: 1.55))
+            : SelectableText.rich(markdownSpan(part.text, base: sans(16, c: color, w: FontWeight.w400, h: 1.55), palette: p)),
+    ];
+
+    // Sonot Code replies interleave text with the tool steps taken along the way.
+    final text = message.text;
+    final children = <Widget>[];
+    var pos = 0;
+    for (final step in message.steps) {
+      final at = step.at.clamp(pos, text.length);
+      children
+        ..addAll(body(text.substring(pos, at)))
+        ..add(StepCard(key: ObjectKey(step), step: step, palette: p));
+      pos = at;
+    }
+    children.addAll(body(text.substring(pos)));
     return Padding(
       padding: const EdgeInsets.only(top: 18, right: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final part in _split(message.text))
-            part.code
-                ? _CodeBlock(code: part.text, lang: part.lang, palette: p)
-                : message.error
-                ? SelectableText(part.text, style: sans(16, c: color, w: FontWeight.w400, h: 1.55))
-                : SelectableText.rich(markdownSpan(part.text, base: sans(16, c: color, w: FontWeight.w400, h: 1.55), palette: p)),
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../code/step.dart';
 import 'models.dart';
 import 'theme.dart';
 
@@ -11,6 +12,9 @@ class ChatMessage {
   final String role; // 'user' | 'assistant'
   String text;
   bool error = false;
+
+  /// Sonot Code: the tool calls made while writing this reply.
+  final List<ToolStep> steps = [];
 
   Map<String, String> toJson() => {'role': role, 'content': text};
 }
