@@ -24,6 +24,9 @@ class ToolStep {
   /// A picture to show on the card (a browser screenshot).
   Uint8List? image;
 
+  /// A screenshot (base64 JPEG) the model should see after this step.
+  String? modelImage;
+
   /// A one-line label, e.g. "Run  npm test".
   String get title => describeStep(name, args);
 }
@@ -44,7 +47,16 @@ String describeStep(String name, Map<String, dynamic> a) {
     'search' => 'Search for ${s('pattern')}',
     'browser' => 'Browse$on  ${s('task')}',
     'notify' => 'Notify$on  ${s('title')}',
-    'nodes' => 'List devices',
+    'computer' => switch (s('action')) {
+      'click' || 'double_click' || 'right_click' => 'Click at ${s('x')}, ${s('y')}',
+      'type' => 'Type  ${s('text')}',
+      'key' => 'Press  ${s('keys')}',
+      'scroll' => 'Scroll',
+      'drag' => 'Drag',
+      'open_url' => 'Open  ${s('url')}',
+      'release' => 'Shut down the computer',
+      _ => 'Look at the screen',
+    },
     _ => name,
   };
 }

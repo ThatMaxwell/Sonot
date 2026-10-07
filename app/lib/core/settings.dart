@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
@@ -68,6 +70,17 @@ class Settings {
   set githubExpires(int v) => _prefs.setInt('github.expires', v);
   String get githubUser => _prefs.getString('github.user') ?? '';
   set githubUser(String v) => _prefs.setString('github.user', v);
+
+  /// A random id for this install, so its cloud computers are its own.
+  String get installId {
+    var id = _prefs.getString('installId');
+    if (id == null) {
+      final r = Random.secure();
+      id = List.generate(10, (_) => 'abcdefghijkmnpqrstuvwxyz23456789'[r.nextInt(32)]).join();
+      _prefs.setString('installId', id);
+    }
+    return id;
+  }
 
   bool get signedIn => provider == 'puter' ? puterToken.isNotEmpty : server.isNotEmpty;
 

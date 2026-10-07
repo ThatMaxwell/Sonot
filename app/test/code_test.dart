@@ -149,4 +149,61 @@ void main() {
     expect(wire[3]['tool_call_id'], 'call_1');
     expect(wire[3]['content'], contains('from-tool'));
   });
+
+  test('a Bud drives its own cloud computer and sees the screenshot', () async {
+    final requests = <Map<String, dynamic>>[];
+    final actions = <Map<String, dynamic>>[];
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+    server.listen((req) async {
+      final body = jsonDecode(await utf8.decoder.bind(req).join()) as Map<String, dynamic>;
+      if (req.uri.path == '/v1/computer') {
+        actions.add(body);
+        req.response.headers.contentType = ContentType.json;
+        req.response.write(jsonEncode({'ok': true, 'text': 'Screen is 1280x800.', 'screenshot': base64Encode([1, 2, 3])}));
+        return req.response.close();
+      }
+      requests.add(body['args'] as Map<String, dynamic>);
+      req.response.headers.contentType = ContentType('application', 'x-ndjson');
+      if (requests.length == 1) {
+        req.response.writeln(jsonEncode({'type': 'tool_use', 'id': 't1', 'name': 'computer', 'input': {'action': 'screenshot'}}));
+      } else {
+        req.response.writeln(jsonEncode({'type': 'text', 'text': 'I see my desktop [[emo:happy]]'}));
+      }
+      await req.response.close();
+    });
+
+    final settings = await Settings.load();
+    settings.workspace = tmp.path;
+    settings.server = '127.0.0.1:${server.port}';
+    final tools = Toolbox(
+      settings: settings,
+      permissions: Permissions(settings),
+      browser: BrowserRunner(cloudServer: () => settings.server, cloudToken: () => ''),
+      github: GitHub(settings),
+    );
+    final agent = CodeAgent(tools, system: (r) => 'persona', only: const {'browser', 'computer', 'notify'}, computer: tools.computerName('bud-pip'));
+    final tier = tierById('anthem');
+    final done = Completer<ChatMessage>();
+    agent.send(
+      'open ur computer',
+      provider: PuterProvider('tok', api: 'http://127.0.0.1:${server.port}'),
+      build: (h) => ChatRequest(history: h, mode: Mode.buds, tier: tier, effort: tier.defaultEffort),
+      filter: (c) => c.replaceAll(RegExp(r'\s*\[\[emo:\w+\]\]'), ''),
+      onDone: done.complete,
+    );
+    final reply = await done.future.timeout(const Duration(seconds: 20));
+
+    expect(reply.error, isFalse, reason: reply.text);
+    expect(reply.text, 'I see my desktop');
+    expect(actions.single['action'], 'screenshot');
+    expect(actions.single['computer'], startsWith('bud-pip-'));
+    expect((requests.first['tools'] as List).map((t) => t['function']['name']), unorderedEquals(['browser', 'computer', 'notify']));
+    expect((requests.first['messages'] as List).first['content'], 'persona');
+    final wire = (requests[1]['messages'] as List).cast<Map>();
+    expect(wire[3]['role'], 'tool');
+    expect(wire[4]['role'], 'user');
+    expect((wire[4]['content'] as List).last['image_url']['url'], 'data:image/jpeg;base64,${base64Encode([1, 2, 3])}');
+    expect(reply.steps.single.image, isNotNull);
+  });
 }

@@ -26,12 +26,15 @@ Code mode is an agent that works on your machine. It streams Puter's tool calls 
 | `run_node` | Runs a Node.js script. |
 | `read_file`, `write_file`, `edit_file`, `list_dir`, `search` | Work in the workspace folder (or any path). |
 | `browser` | A real browser driven by [browser-use](https://github.com/browser-use/browser-use). |
+| `computer` | Its own cua.ai cloud computer: screenshots, mouse and keyboard (through the Sonot server). |
 | `notify` | A system notification. `urgent` forces it through Do Not Disturb (Windows) or shows a full-screen alert (Android). |
 | `github_*` | GitHub's MCP server (repos, issues, PRs, Actions, code search) once you sign in with GitHub. |
 
 Anything that changes things asks first, with **Allow once**, **Always allow** (remembered per program, e.g. every `npm` command) and **Deny**. Code settings (the terminal button) set the workspace folder, where the browser runs, GitHub, and what's always allowed. You get a notification when a task finishes or needs you while Sonot is in the background.
 
 **Browser.** On Windows and Linux the app runs [`assets/helpers/sonot_browser.py`](assets/helpers/sonot_browser.py) with [uv](https://docs.astral.sh/uv/), which it downloads on first use, so nothing needs installing. browser-use drives Chrome, Edge or Chromium with a Sonot profile of its own, and its LLM calls go to Puter with your sign-in. On Android, or with *Cloud computer* picked, the Sonot server runs the same helper against a cua.ai cloud computer (see [`../server`](../server)).
+
+**Buds** run the same agent with `browser`, `computer` and `notify`, always on a cloud computer of their own (`bud-<id>-<install>`), never on your device. Each reply shows what the Bud did as cards, with screenshots.
 
 **GitHub.** *Sign in with GitHub* uses the device flow of a GitHub App, so no secret ships in the app. Build with `--dart-define=SONOT_GITHUB_CLIENT_ID=<the app's client id>` (CI reads the `SONOT_GITHUB_CLIENT_ID` repo variable). Without it, paste a personal access token in Code settings instead. Commands also get `GH_TOKEN`, so `gh` and `git` work.
 

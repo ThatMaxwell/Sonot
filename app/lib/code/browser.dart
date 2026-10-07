@@ -40,6 +40,7 @@ class BrowserRunner {
     String? startUrl,
     int maxSteps = 40,
     bool cloud = false,
+    String? computer,
   }) {
     final req = {
       'type': 'task',
@@ -49,6 +50,7 @@ class BrowserRunner {
       'model': model,
       'start_url': ?startUrl,
       'max_steps': maxSteps,
+      'computer': ?computer,
     };
     return cloud || !canRunLocally ? _cloud(req) : _local(req);
   }
@@ -193,32 +195,46 @@ class BrowserRunner {
 
   // ---- On a cua.ai cloud computer, through the Sonot server -------------
 
+  Uri _server(String path) {
+    var base = cloudServer().trim();
+    if (base.isEmpty) {
+      throw Exception('Cloud computers run through a Sonot server, and none is set up yet (Use my own server, or a build with SONOT_SERVER).');
+    }
+    if (!base.startsWith('http')) base = 'http://$base';
+    return Uri.parse('${base.replaceFirst(RegExp(r'/$'), '')}$path');
+  }
+
+  /// One computer-use action on the cloud computer named [computer].
+  /// Returns `{ok, text, screenshot?}`.
+  Future<Map<String, dynamic>> act(String computer, Map<String, dynamic> action) async {
+    final token = cloudToken();
+    final res = await http
+        .post(
+          _server('/v1/computer'),
+          headers: {'content-type': 'application/json', if (token.isNotEmpty) 'authorization': 'Bearer $token'},
+          body: jsonEncode({...action, 'computer': computer}),
+        )
+        .timeout(const Duration(minutes: 16));
+    if (res.statusCode != 200) throw Exception('The Sonot server answered ${res.statusCode}: ${res.body}');
+    return (jsonDecode(res.body) as Map).cast<String, dynamic>();
+  }
+
   Stream<BrowserEvent> _cloud(Map<String, dynamic> req) {
     final client = http.Client();
     late final StreamController<BrowserEvent> out;
     out = StreamController<BrowserEvent>(
       onListen: () async {
         try {
-          var base = cloudServer().trim();
-          if (base.isEmpty) {
-            throw Exception(
-              Platform.isAndroid
-                  ? 'Browsing from a phone runs on a cloud computer through a Sonot server, and none is set up. Add one under Use my own server.'
-                  : 'No Sonot server is set for cloud browsing.',
-            );
-          }
-          if (!base.startsWith('http')) base = 'http://$base';
-          base = base.replaceFirst(RegExp(r'/$'), '');
           final token = cloudToken();
           final res = await client.send(
-            http.Request('POST', Uri.parse('$base/v1/browser'))
+            http.Request('POST', _server('/v1/browser'))
               ..headers.addAll({'content-type': 'application/json', if (token.isNotEmpty) 'authorization': 'Bearer $token'})
               ..body = jsonEncode(req),
           );
           if (res.statusCode != 200) {
             throw Exception('The Sonot server answered ${res.statusCode}: ${await res.stream.bytesToString()}');
           }
-          out.add({'type': 'status', 'text': 'Starting a cloud computer'});
+          out.add({'type': 'status', 'text': 'Using the cloud computer'});
           await for (final line in res.stream.transform(const Utf8Decoder(allowMalformed: true)).transform(const LineSplitter())) {
             if (!line.startsWith('data:')) continue;
             final ev = (jsonDecode(line.substring(5).trim()) as Map).cast<String, dynamic>();

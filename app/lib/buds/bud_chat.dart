@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../code/agent.dart';
+import '../code/browser.dart';
+import '../code/github.dart';
+import '../code/permissions.dart';
+import '../code/tools.dart';
 import '../core/api.dart';
 import '../core/conversation.dart';
 import '../core/settings.dart';
@@ -13,6 +18,24 @@ import 'buds.dart';
 
 /// Conversations with each Bud, kept while the app is open.
 final _convos = <String, Conversation>{};
+
+/// The hands every Bud shares: a browser and computer actions, always on
+/// the Bud's own cloud computer (never on your device), and notifications.
+Toolbox? _tools;
+Toolbox _budTools(Settings settings) => _tools ??= Toolbox(
+  settings: settings,
+  permissions: Permissions(settings),
+  browser: BrowserRunner(cloudServer: () => settings.server, cloudToken: () => settings.token),
+  github: GitHub(settings),
+);
+
+/// Added to every Bud's persona: what its computer is and how to use it.
+const budComputerNote = '''
+You have your own computer: a cloud Linux desktop on cua.ai that is yours alone, not the user's device. Use it:
+- browser: a real web browser on your computer (browser-use). Use it to look things up, visit and read sites, compare, fill forms and do web tasks. Give it one clear goal.
+- computer: see your computer's screen (each action returns a screenshot) and use its mouse and keyboard.
+- notify: send the user a notification; urgent only when something truly needs them now.
+When the user asks you to browse, check something online or use your computer, do it with these tools instead of saying you can't. Say briefly what you're doing, then report what you found. Sign-ins on your computer are yours, never the user's: don't ask for their passwords. Your computer sleeps after 30 idle minutes and keeps nothing private of theirs.''';
 
 /// Chat with one Bud: a live face in the header, hidden emotion tags that
 /// move it, and notes it keeps that you can see and edit.
@@ -27,7 +50,15 @@ class BudChat extends StatefulWidget {
 }
 
 class _BudChatState extends State<BudChat> {
-  late final Conversation _convo = _convos.putIfAbsent(widget.bud.id, Conversation.new);
+  late final Conversation _convo = _convos.putIfAbsent(widget.bud.id, () {
+    final tools = _budTools(widget.settings);
+    return CodeAgent(
+      tools,
+      system: (req) => '${req.system ?? widget.bud.persona}\n\n$budComputerNote',
+      only: const {'browser', 'computer', 'notify'},
+      computer: tools.computerName('bud-${widget.bud.id}'),
+    );
+  });
   final _face = BudFaceController();
   final _input = TextEditingController();
   final _focus = FocusNode();

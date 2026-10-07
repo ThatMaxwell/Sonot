@@ -10,7 +10,11 @@ stdin/stdout, one JSON object per line.
 
 In (app -> helper):
   {"type": "task", "id": "...", "task": "...", "token": "<puter token>",
-   "model": "claude-sonnet-5-5", "start_url": "...", "max_steps": 40}
+   "model": "claude-sonnet-5-5", "start_url": "...", "max_steps": 40,
+   "computer": "<cloud computer name>"}            (--cloud: which computer's browser)
+  {"type": "computer", "id": "...", "computer": "<name>", "action": "screenshot" | "click" |
+   "double_click" | "right_click" | "move" | "drag" | "scroll" | "type" | "key" | "open_url" |
+   "release", "x", "y", "x2", "y2", "dx", "dy", "text", "keys", "url"}   (--cloud only)
   {"type": "cancel", "id": "..."}
   {"type": "close"}                     closes the browser window
 
@@ -20,9 +24,11 @@ Out (helper -> app):
   {"type": "step", "id", "n", "goal", "url", "title", "actions": [...], "screenshot": "<base64 jpeg>"}
   {"type": "done", "id", "ok", "result", "urls": [...], "steps": n}
   {"type": "error", "id", "message"}
+  {"type": "result", "id", "ok", "text", "screenshot": "<base64 jpeg>"}   (computer actions)
 
-`--cloud` runs the browser on a cua.ai cloud computer instead of this machine
-(the Sonot server does this for phones). It needs `cua-sandbox` and Cua
+`--cloud` runs browsers on cua.ai cloud computers instead of this machine
+(the Sonot server does this for phones and for Buds). Each named computer is
+a Linux desktop of its own, which computer actions see and drive. It needs `cua-sandbox` and Cua
 credentials (CUA_API_KEY, or CUA_CLIENT_ID + CUA_CLIENT_SECRET).
 """
 
@@ -175,84 +181,189 @@ def _small_jpeg(b64png: str | None) -> str | None:
         return None
 
 
-class CloudComputer:
-    """A cua.ai cloud computer whose Chromium browser-use drives over CDP."""
+KEEP_ALIVE_MIN = float(os.environ.get("SONOT_COMPUTER_KEEP_MINUTES", "30"))
 
-    def __init__(self) -> None:
+# xdotool-style names the model may use, mapped to what cua's keyboard takes.
+_KEYS = {"return": "enter", "esc": "escape", "control": "ctrl", "super": "cmd", "win": "cmd", "page_down": "pagedown", "page_up": "pageup"}
+
+_LAUNCH_CHROMIUM = (
+    "curl -s localhost:9222/json/version >/dev/null 2>&1 && exit 0; "
+    "B=$(command -v chromium || command -v chromium-browser || command -v google-chrome || true); "
+    'if [ -z "$B" ]; then (sudo -n apt-get update -qq && sudo -n apt-get install -y -qq chromium) >/dev/null 2>&1 '
+    "|| (apt-get update -qq && apt-get install -y -qq chromium) >/dev/null 2>&1; "
+    "B=$(command -v chromium || command -v chromium-browser); fi; "
+    'export DISPLAY=${DISPLAY:-:0}; nohup "$B" --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0 '
+    "--no-first-run --no-default-browser-check --start-maximized --user-data-dir=$HOME/.sonot-chrome about:blank "
+    ">/tmp/sonot-chrome.log 2>&1 &"
+)
+
+
+class CloudComputer:
+    """A cua.ai cloud computer: a Linux desktop of its own that the agent can
+    see and drive with the mouse and keyboard, with a Chromium on its screen
+    that browser-use drives over CDP.
+
+    Named, so a Bud gets the same computer back while it stays alive
+    (SONOT_COMPUTER_KEEP_MINUTES after the last use, 30 by default)."""
+
+    def __init__(self, key: str) -> None:
+        self.key = key
         self.sb = None
-        self._ctx = None
         self._tunnel = None
         self.cdp_url: str | None = None
+        self._lock = asyncio.Lock()
 
-    async def start(self, say) -> str:
+    @property
+    def name(self) -> str:
+        safe = re.sub(r"[^a-z0-9-]+", "-", self.key.lower()).strip("-")[:40] or "default"
+        return f"sonot-{safe}"
+
+    async def start(self, say) -> Any:
+        async with self._lock:
+            if self.sb is not None:
+                return self.sb
+            try:
+                from cua_sandbox import Image, Sandbox
+            except ImportError as e:
+                raise RuntimeError("cua-sandbox is not installed on this server.") from e
+            await say("Starting its cloud computer")
+            # create() reattaches to a running computer with the same name.
+            self.sb = await Sandbox.create(Image.linux(), name=self.name, on="cloud", keep_alive_minutes=KEEP_ALIVE_MIN)
+            return self.sb
+
+    async def browser_url(self, say) -> str:
+        sb = await self.start(say)
         if self.cdp_url:
             return self.cdp_url
-        try:
-            from cua_sandbox import Image, Sandbox
-        except ImportError as e:
-            raise RuntimeError("cua-sandbox is not installed on this server.") from e
-        await say("Starting a cloud computer")
-        self._ctx = Sandbox.ephemeral(Image.linux(), on="cloud")
-        self.sb = await self._ctx.__aenter__()
         await say("Opening the browser on it")
-        launch = (
-            "B=$(command -v chromium || command -v chromium-browser || command -v google-chrome || true); "
-            'if [ -z "$B" ]; then (sudo -n apt-get update -qq && sudo -n apt-get install -y -qq chromium) >/dev/null 2>&1 '
-            "|| (apt-get update -qq && apt-get install -y -qq chromium) >/dev/null 2>&1; "
-            "B=$(command -v chromium || command -v chromium-browser); fi; "
-            'export DISPLAY=${DISPLAY:-:0}; nohup "$B" --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0 '
-            "--no-first-run --no-default-browser-check --user-data-dir=/tmp/sonot-chrome about:blank >/tmp/sonot-chrome.log 2>&1 &"
-        )
-        await self.sb.shell.run(launch)
-        self._tunnel = self.sb.tunnel.forward(9222)
+        await sb.shell.run(_LAUNCH_CHROMIUM, timeout=300)
+        self._tunnel = sb.tunnel.forward(9222)
         t = await self._tunnel.__aenter__()
-        self.cdp_url = str(t.url).rstrip("/")
+        url = str(t.url).rstrip("/")
         for _ in range(60):
             try:
                 async with httpx.AsyncClient(timeout=5) as c:
-                    if (await c.get(f"{self.cdp_url}/json/version")).status_code == 200:
-                        return self.cdp_url
+                    if (await c.get(f"{url}/json/version")).status_code == 200:
+                        self.cdp_url = url
+                        return url
             except Exception:
                 pass
             await asyncio.sleep(2)
         raise RuntimeError("The cloud computer's browser did not start.")
 
+    async def act(self, msg: dict[str, Any], say) -> dict[str, Any]:
+        """One computer-use action (mouse, keyboard, screenshot). Returns a
+        fresh screenshot of the screen afterwards."""
+        sb = await self.start(say)
+        a = msg.get("action") or "screenshot"
+        x, y = int(msg.get("x") or 0), int(msg.get("y") or 0)
+        text = ""
+        if a == "screenshot":
+            pass
+        elif a == "click":
+            await sb.mouse.click(x, y, msg.get("button") or "left")
+        elif a == "double_click":
+            await sb.mouse.double_click(x, y)
+        elif a == "right_click":
+            await sb.mouse.right_click(x, y)
+        elif a == "move":
+            await sb.mouse.move(x, y)
+        elif a == "drag":
+            await sb.mouse.drag(x, y, int(msg.get("x2") or 0), int(msg.get("y2") or 0))
+        elif a == "scroll":
+            await sb.mouse.scroll(x, y, scroll_x=int(msg.get("dx") or 0), scroll_y=int(msg.get("dy") or 3))
+        elif a == "type":
+            await sb.keyboard.type(str(msg.get("text") or ""))
+        elif a == "key":
+            raw = str(msg.get("keys") or "")
+            keys = [_KEYS.get(k.strip().lower(), k.strip().lower()) for k in raw.replace("+", " ").split() if k.strip()]
+            await sb.keyboard.keypress(keys if len(keys) > 1 else (keys[0] if keys else "enter"))
+        elif a == "open_url":
+            url = str(msg.get("url") or "about:blank")
+            await self.browser_url(say)
+            async with httpx.AsyncClient(timeout=20) as c:
+                await c.put(f"{self.cdp_url}/json/new?{url}")
+            text = f"Opened {url}."
+        elif a == "release":
+            await self.stop()
+            return {"ok": True, "text": "Released the computer."}
+        else:
+            return {"ok": False, "text": f"Unknown action {a}."}
+        if a != "screenshot":
+            await asyncio.sleep(0.6)  # let the screen settle
+        shot = await sb.screen.screenshot(format="jpeg", quality=70)
+        w, h = await sb.screen.size()
+        return {
+            "ok": True,
+            "text": (text + " " if text else "") + f"Screen is {w}x{h}.",
+            "screenshot": base64.b64encode(shot).decode(),
+        }
+
     async def stop(self) -> None:
-        for ctx in (self._tunnel, self._ctx):
-            if ctx is not None:
-                try:
-                    await ctx.__aexit__(None, None, None)
-                except Exception:
-                    pass
-        self.sb = self._ctx = self._tunnel = self.cdp_url = None
+        if self._tunnel is not None:
+            try:
+                await self._tunnel.__aexit__(None, None, None)
+            except Exception:
+                pass
+        if self.sb is not None:
+            try:
+                await self.sb.disconnect()
+            except Exception:
+                pass
+        self.sb = self._tunnel = self.cdp_url = None
 
 
 class Helper:
     def __init__(self, cloud: bool):
-        self.cloud = CloudComputer() if cloud else None
-        self.browser: Browser | None = None
+        self.cloud = cloud
+        self.computers: dict[str, CloudComputer] = {}
+        self.browsers: dict[str, Browser] = {}
         self.agents: dict[str, Agent] = {}
         self.tasks: dict[str, asyncio.Task] = {}
 
-    async def _browser(self, say) -> Browser:
-        if self.browser is not None:
-            return self.browser
+    def computer(self, key: str | None) -> CloudComputer:
+        key = key or "default"
+        if key not in self.computers:
+            self.computers[key] = CloudComputer(key)
+        return self.computers[key]
+
+    async def _browser(self, say, key: str | None = None) -> Browser:
+        k = (key or "default") if self.cloud else "local"
+        if k in self.browsers:
+            return self.browsers[k]
         if self.cloud:
-            self.browser = Browser(cdp_url=await self.cloud.start(say), keep_alive=True)
+            b = Browser(cdp_url=await self.computer(key).browser_url(say), keep_alive=True)
         else:
             # A profile of its own, so sign-ins stick between tasks but never
             # touch the user's everyday browser profile.
             profile = os.environ.get("SONOT_BROWSER_PROFILE") or os.path.join(
                 os.path.expanduser("~"), ".sonot", "browser-profile"
             )
-            self.browser = Browser(
+            b = Browser(
                 headless=os.environ.get("SONOT_BROWSER_HEADLESS") == "1",
                 user_data_dir=profile,
                 keep_alive=True,
                 executable_path=os.environ.get("SONOT_BROWSER_EXECUTABLE") or None,
                 chromium_sandbox=os.environ.get("SONOT_BROWSER_NO_SANDBOX") != "1",
             )
-        return self.browser
+        self.browsers[k] = b
+        return b
+
+    async def act(self, msg: dict[str, Any]) -> None:
+        tid = str(msg.get("id"))
+
+        async def say(text: str) -> None:
+            await emit(type="status", id=tid, text=text)
+
+        try:
+            if not self.cloud:
+                raise RuntimeError("Computer use needs cloud computers (cua.ai credentials on the Sonot server).")
+            r = await self.computer(msg.get("computer")).act(msg, say)
+            if msg.get("action") == "release":
+                self.browsers.pop(msg.get("computer") or "default", None)
+            await emit(type="result", id=tid, **r)
+        except Exception as e:
+            await emit(type="result", id=tid, ok=False, text=f"{type(e).__name__}: {e}")
 
     async def run(self, msg: dict[str, Any]) -> None:
         tid = str(msg.get("id"))
@@ -265,7 +376,7 @@ class Helper:
             if not token:
                 raise RuntimeError("Sign in to Puter first.")
             llm = ChatPuter(msg.get("model") or "claude-sonnet-5-5", token)
-            browser = await self._browser(say)
+            browser = await self._browser(say, msg.get("computer"))
 
             async def on_step(state, output, n) -> None:
                 actions = []
@@ -315,14 +426,14 @@ class Helper:
             self.tasks.pop(tid, None)
 
     async def close(self) -> None:
-        if self.browser is not None:
+        for b in self.browsers.values():
             try:
-                await self.browser.kill()
+                await b.kill()
             except Exception:
                 pass
-            self.browser = None
-        if self.cloud:
-            await self.cloud.stop()
+        self.browsers.clear()
+        for c in self.computers.values():
+            await c.stop()
 
 
 async def main() -> None:
@@ -343,6 +454,8 @@ async def main() -> None:
         tid = str(msg.get("id"))
         if kind == "task":
             helper.tasks[tid] = asyncio.create_task(helper.run(msg))
+        elif kind == "computer":
+            helper.tasks[tid] = asyncio.create_task(helper.act(msg))
         elif kind == "cancel":
             if tid in helper.agents:
                 helper.agents[tid].stop()

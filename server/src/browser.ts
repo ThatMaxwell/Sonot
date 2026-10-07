@@ -6,8 +6,13 @@
  * as Server-Sent Events. With Cua credentials the browser itself runs on a
  * cua.ai cloud computer; without them it runs headless on this server.
  *
- *   POST /v1/browser  {task, token, model, start_url?, max_steps?}
+ *   POST /v1/browser   {task, token, model, start_url?, max_steps?, computer?}
  *   -> data: {"type": "status" | "step" | "done" | "error", ...}
+ *   POST /v1/computer  {computer, action, x?, y?, x2?, y2?, dx?, dy?, text?, keys?, url?}
+ *   -> {ok, text, screenshot?}     (needs Cua credentials)
+ *
+ * `computer` names a cloud computer of its own (a Bud's, or Sonot Code's).
+ * The same name gets the same computer back while it is alive.
  *
  * The task's LLM calls use the app user's own Puter token (`token`), so the
  * user pays for their own browsing, same as chat.
@@ -22,7 +27,10 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const HELPER = process.env.SONOT_BROWSER_HELPER ?? resolve(here, "../../app/assets/helpers/sonot_browser.py");
 const UV = process.env.UV ?? "uv";
-const CLOUD = Boolean(process.env.CUA_API_KEY || (process.env.CUA_CLIENT_ID && process.env.CUA_CLIENT_SECRET));
+// Cua Fleet credentials (or SONOT_CUA=1 after `cua auth login` on this machine).
+const CLOUD = Boolean(
+  process.env.SONOT_CUA === "1" || process.env.FLEETS_TOKEN || process.env.CUA_API_KEY || (process.env.CUA_CLIENT_ID && process.env.CUA_CLIENT_SECRET),
+);
 
 type Event = { type: string; id?: string; [k: string]: unknown };
 type Listener = (e: Event) => void;
@@ -74,7 +82,7 @@ function start(): Promise<void> {
 }
 
 export async function handleBrowser(req: http.IncomingMessage, res: http.ServerResponse, body: unknown, cors: Record<string, string>) {
-  const b = (body ?? {}) as { task?: unknown; token?: unknown; model?: unknown; start_url?: unknown; max_steps?: unknown };
+  const b = (body ?? {}) as { task?: unknown; token?: unknown; model?: unknown; start_url?: unknown; max_steps?: unknown; computer?: unknown };
   if (typeof b.task !== "string" || !b.task.trim() || typeof b.token !== "string" || !b.token) {
     res.writeHead(400, { "content-type": "application/json", ...cors });
     return res.end(JSON.stringify({ error: "`task` and `token` are required." }));
@@ -122,11 +130,65 @@ export async function handleBrowser(req: http.IncomingMessage, res: http.ServerR
         model: typeof b.model === "string" ? b.model : "claude-sonnet-5-5",
         start_url: typeof b.start_url === "string" ? b.start_url : undefined,
         max_steps: typeof b.max_steps === "number" ? Math.min(b.max_steps, 100) : 40,
+        computer: computerName(b.computer),
       }) + "\n",
     );
     res.on("close", () => done());
   });
   res.end();
+}
+
+const ACTIONS = new Set(["screenshot", "click", "double_click", "right_click", "move", "drag", "scroll", "type", "key", "open_url", "release"]);
+
+function computerName(v: unknown): string {
+  return typeof v === "string" && /^[A-Za-z0-9_.-]{1,64}$/.test(v) ? v : "default";
+}
+
+/** One computer-use action on a cloud computer. Answers JSON. */
+export async function handleComputer(res: http.ServerResponse, body: unknown, cors: Record<string, string>) {
+  const reply = (status: number, payload: unknown) => {
+    res.writeHead(status, { "content-type": "application/json", ...cors });
+    res.end(JSON.stringify(payload));
+  };
+  const b = (body ?? {}) as Record<string, unknown>;
+  if (!CLOUD) return reply(200, { ok: false, text: "This Sonot server has no Cua credentials, so it has no cloud computers." });
+  if (typeof b.action !== "string" || !ACTIONS.has(b.action)) return reply(400, { error: "Unknown `action`." });
+  try {
+    await start();
+  } catch (e) {
+    return reply(200, { ok: false, text: (e as Error).message });
+  }
+  const id = `c${nextId++}`;
+  const num = (k: string) => (typeof b[k] === "number" ? Math.round(b[k] as number) : undefined);
+  const str = (k: string) => (typeof b[k] === "string" ? (b[k] as string).slice(0, 20000) : undefined);
+  const result = await new Promise<Event>((done) => {
+    const timer = setTimeout(() => done({ type: "result", ok: false, text: "The cloud computer took too long to answer." }), 15 * 60_000);
+    listeners.set(id, (ev) => {
+      if (ev.type !== "result" && ev.type !== "error") return; // status lines
+      clearTimeout(timer);
+      listeners.delete(id);
+      done(ev);
+    });
+    helper!.stdin.write(
+      JSON.stringify({
+        type: "computer",
+        id,
+        computer: computerName(b.computer),
+        action: b.action,
+        x: num("x"),
+        y: num("y"),
+        x2: num("x2"),
+        y2: num("y2"),
+        dx: num("dx"),
+        dy: num("dy"),
+        text: str("text"),
+        keys: str("keys"),
+        url: str("url"),
+      }) + "\n",
+    );
+  });
+  const { type: _t, id: _i, ...rest } = result;
+  reply(200, rest);
 }
 
 export const browserMode = () => (CLOUD ? "cua cloud computer" : "headless on this server");

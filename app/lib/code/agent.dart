@@ -12,7 +12,8 @@ import 'tools.dart';
 
 const _agentPrompt = '''
 You are Sonot Code, the coding agent in the Sonot app, made by ThatMaxwell. You work on the user's own machine through tools:
-shell commands and background processes, Node.js scripts, files, a real web browser (browser-use), notifications and, when they've signed in, GitHub.
+shell commands and background processes, Node.js scripts, files, a real web browser (browser-use), your own cloud computer
+(a Linux desktop you see through screenshots and drive with mouse and keyboard), notifications and, when they've signed in, GitHub.
 
 How to work:
 - Act, don't describe. Look before you change things: list, read and search first, then edit, then run the build or tests to check.
@@ -30,8 +31,20 @@ How to work:
 /// it asked for, send the results back, repeat until it answers. Your own
 /// Sonot server doesn't do tools yet, so Code there is plain chat.
 class CodeAgent extends Conversation {
-  CodeAgent(this.toolbox);
+  CodeAgent(this.toolbox, {this.system, this.only, this.computer});
   final Toolbox toolbox;
+
+  /// The system prompt; Sonot Code's own when null. Buds bring their persona.
+  final String Function(ChatRequest req)? system;
+
+  /// The tools this agent may use; all of them when null.
+  final Set<String>? only;
+
+  /// The cloud computer this agent owns (each Bud has its own).
+  final String? computer;
+
+  /// Screenshots kept in the model's view; older ones are dropped to save room.
+  static const keepScreens = 3;
 
   /// What the model sees, including tool calls and results.
   final List<Map<String, dynamic>> _wire = [];
@@ -70,7 +83,7 @@ class CodeAgent extends Conversation {
     _cancelled = false;
     _wire.add({'role': 'user', 'content': user.text});
     notifyListeners();
-    _loop(reply, provider, req).then((_) {
+    _loop(reply, provider, req, filter).then((_) {
       onDone?.call(reply);
     }, onError: (Object e) {
       reply.error = true;
@@ -89,10 +102,10 @@ class CodeAgent extends Conversation {
     });
   }
 
-  Future<void> _loop(ChatMessage reply, PuterProvider puter, ChatRequest req) async {
+  Future<void> _loop(ChatMessage reply, PuterProvider puter, ChatRequest req, String Function(String)? filter) async {
     await toolbox.prepare();
     toolbox.browserModel = req.tier.id == 'anthem' || req.tier.id == 'chord' ? 'claude-sonnet-5-5' : req.tier.model;
-    final system = '$_agentPrompt\n\n${toolbox.platformNote}';
+    final system = this.system?.call(req) ?? '$_agentPrompt\n\n${toolbox.platformNote}';
     for (var turn = 0; turn < maxTurns && !_cancelled; turn++) {
       final turnText = StringBuffer();
       final uses = <Map<String, dynamic>>[];
@@ -100,7 +113,7 @@ class CodeAgent extends Conversation {
       await _complete(puter, req, system, onText: (t) {
         if (turnText.isEmpty && reply.text.isNotEmpty && !reply.text.endsWith('\n')) reply.text += '\n\n';
         turnText.write(t);
-        reply.text += t;
+        reply.text += filter == null ? t : filter(t);
         notifyListeners();
       }, onTool: uses.add, onReasoning: reasoning.add);
       if (_cancelled) return;
@@ -115,6 +128,7 @@ class CodeAgent extends Conversation {
       });
       if (uses.isEmpty) break;
       _pending.addAll(uses.map((u) => u['id'] as String));
+      final screens = <ToolStep>[];
       for (final u in uses) {
         if (_cancelled) return;
         final input = u['input'];
@@ -128,7 +142,7 @@ class CodeAgent extends Conversation {
         notifyListeners();
         String result;
         try {
-          result = await toolbox.run(step, notifyListeners, puterToken: puter.token);
+          result = await toolbox.run(step, notifyListeners, puterToken: puter.token, computer: computer);
           if (step.status == StepStatus.running) step.status = StepStatus.done;
         } catch (e) {
           step.status = StepStatus.failed;
@@ -139,6 +153,24 @@ class CodeAgent extends Conversation {
         if (_cancelled) return;
         _pending.remove(step.id);
         _wire.add({'role': 'tool', 'tool_call_id': step.id, 'content': result});
+        if (step.modelImage != null) screens.add(step);
+      }
+      // Tool results are text-only on Puter, so screens follow as one user
+      // message after all of this turn's results (they must come first).
+      if (screens.isNotEmpty) {
+        _wire.add({
+          'role': 'user',
+          'content': [
+            for (final st in screens) ...[
+              {'type': 'text', 'text': 'Screenshot after ${st.title}:'},
+              {
+                'type': 'image_url',
+                'image_url': {'url': 'data:image/jpeg;base64,${st.modelImage}'},
+              },
+            ],
+          ],
+        });
+        _dropOldScreens();
       }
     }
   }
@@ -165,7 +197,7 @@ class CodeAgent extends Conversation {
               'model': req.tier.model,
               'stream': true,
               'reasoning_effort': req.effort.puter,
-              'tools': toolbox.schemas,
+              'tools': toolbox.schemasFor(only),
               'messages': [
                 {'role': 'system', 'content': system},
                 ..._wire,
@@ -204,6 +236,20 @@ class CodeAgent extends Conversation {
     } finally {
       client.close();
       _client = null;
+    }
+  }
+
+  void _dropOldScreens() {
+    var seen = 0;
+    for (final m in _wire.reversed) {
+      final c = m['content'];
+      if (c is! List || !c.any((p) => p is Map && p['type'] == 'image_url')) continue;
+      if (++seen > keepScreens) {
+        m['content'] = [
+          for (final p in c)
+            if (p is Map && p['type'] == 'image_url') {'type': 'text', 'text': '(older screenshot removed)'} else p,
+        ];
+      }
     }
   }
 

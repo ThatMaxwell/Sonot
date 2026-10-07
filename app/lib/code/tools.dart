@@ -76,6 +76,12 @@ class Toolbox {
     return 'Machine: $os. Workspace: $workspaceDir. $gh';
   }
 
+  /// Tools for one agent: all of them, or only [only].
+  List<Map<String, dynamic>> schemasFor(Set<String>? only) => [
+    for (final t in schemas)
+      if (only == null || only.contains(t['function']['name']) || (only.contains('github') && '${t['function']['name']}'.startsWith('github_'))) t,
+  ];
+
   List<Map<String, dynamic>> get schemas => [
     _fn(
       'run_command',
@@ -134,6 +140,30 @@ class Toolbox {
       ['task'],
     ),
     _fn(
+      'computer',
+      'Your own cloud computer (a Linux desktop on cua.ai, separate from the user\'s machine). See its screen and use its mouse '
+          'and keyboard like a person: every action returns a fresh screenshot you can look at. Coordinates are pixels on that '
+          'screenshot. Start with action=screenshot. The browser tool drives the Chromium on this same computer, so use it for '
+          'web tasks and this for anything else on the desktop, or to check what the browser did.',
+      {
+        'action': {
+          'type': 'string',
+          'enum': ['screenshot', 'click', 'double_click', 'right_click', 'move', 'drag', 'scroll', 'type', 'key', 'open_url', 'release'],
+          'description': 'release shuts the computer down when you are completely done with it.',
+        },
+        'x': _i('Pixel x (click, move, drag start, scroll position).'),
+        'y': _i('Pixel y.'),
+        'x2': _i('Drag end x.'),
+        'y2': _i('Drag end y.'),
+        'dy': _i('Scroll amount: positive scrolls down, negative up (default 3).'),
+        'dx': _i('Horizontal scroll amount.'),
+        'text': _s('Text to type.'),
+        'keys': _s('Keys to press, e.g. "enter", "ctrl+l", "alt+tab".'),
+        'url': _s('For open_url: the page to open in its browser.'),
+      },
+      ['action'],
+    ),
+    _fn(
       'notify',
       'Send the user a system notification, e.g. when a long task finishes or you need them. urgent=true forces it through '
           '(breaks through Do Not Disturb on Windows, full-screen alert on Android). Use urgent only when it truly matters.',
@@ -149,7 +179,10 @@ class Toolbox {
 
   /// Runs [step]. Returns what the model reads; keeps [step] up to date and
   /// calls [changed] whenever the card should redraw.
-  Future<String> run(ToolStep step, void Function() changed, {String puterToken = ''}) async {
+  ///
+  /// [computer] names the cloud computer this agent owns (each Bud has its
+  /// own); with one set, the browser runs on it too.
+  Future<String> run(ToolStep step, void Function() changed, {String puterToken = '', String? computer}) async {
     final a = step.args;
     String s(String k) => (a[k] ?? '').toString();
     int n(String k, int def) => (a[k] is num) ? (a[k] as num).toInt() : int.tryParse(s(k)) ?? def;
@@ -271,8 +304,26 @@ class Toolbox {
         return out;
 
       case 'browser':
-        if (!await ask(Ask(title: 'Use the browser', detail: s('task'), rule: 'browser', ruleLabel: 'Always allow the browser'))) return denied;
-        return _browse(step, changed, puterToken);
+        // Only a browser on your own machine asks; cloud computers are the agent's own.
+        final local = computer == null && settings.browserWhere != 'cloud' && BrowserRunner.canRunLocally;
+        if (local && !await ask(Ask(title: 'Use the browser', detail: s('task'), rule: 'browser', ruleLabel: 'Always allow the browser'))) {
+          return denied;
+        }
+        return _browse(step, changed, puterToken, computer);
+
+      case 'computer':
+        final r = await browser.act(computer ?? computerName('code'), {
+          for (final k in ['action', 'x', 'y', 'x2', 'y2', 'dx', 'dy', 'text', 'keys', 'url'])
+            if (a[k] != null) k: a[k],
+        });
+        final shot = r['screenshot'];
+        if (shot is String && shot.isNotEmpty) {
+          step.image = base64Decode(shot);
+          step.modelImage = shot;
+        }
+        if (r['ok'] != true) step.status = StepStatus.failed;
+        step.output = '${r['text'] ?? ''}';
+        return '${r['ok'] == true ? '' : 'Failed: '}${r['text'] ?? ''}${step.modelImage != null ? ' The screenshot follows.' : ''}';
 
       case 'notify':
         final ok = await Notifier.instance.show(s('title'), s('body'), urgent: a['urgent'] == true);
@@ -284,7 +335,13 @@ class Toolbox {
     }
   }
 
-  Future<String> _browse(ToolStep step, void Function() changed, String puterToken) async {
+  /// A cloud computer's name, unique to this install: `code-…`, `bud-pip-…`.
+  String computerName(String who) {
+    final name = '$who-${settings.installId}'.replaceAll(RegExp(r'[^A-Za-z0-9_.-]+'), '-');
+    return name.length > 64 ? name.substring(name.length - 64) : name;
+  }
+
+  Future<String> _browse(ToolStep step, void Function() changed, String puterToken, String? computer) async {
     final a = step.args;
     final log = <String>[];
     String? result;
@@ -296,7 +353,8 @@ class Toolbox {
           maxSteps: (a['max_steps'] is num) ? (a['max_steps'] as num).toInt() : 40,
           puterToken: puterToken,
           model: browserModel,
-          cloud: settings.browserWhere == 'cloud',
+          cloud: computer != null || settings.browserWhere == 'cloud',
+          computer: computer ?? (settings.browserWhere == 'cloud' || !BrowserRunner.canRunLocally ? computerName('code') : null),
         )
         .listen(
           (ev) {
