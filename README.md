@@ -1,6 +1,11 @@
 <div align="center">
 
-<img src="assets/brand/og-image.png" alt="Sonot" width="100%">
+### [thatmaxwell.github.io/Sonot](https://thatmaxwell.github.io/Sonot/)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/sonot-mark.svg">
+  <img src="assets/brand/sonot-mark-ink.svg" alt="Sonot" width="140">
+</picture>
 
 # Sonot
 
@@ -9,7 +14,7 @@
 **One AI family that reads, reasons, writes, codes, sees and speaks.**
 Built for the machines you actually use: **Windows**, **Android** and **Linux**.
 
-[Website](https://thatmaxwell.github.io/Sonot/) · [Made by ThatMaxwell](https://github.com/ThatMaxwell)
+Made by [ThatMaxwell](https://github.com/ThatMaxwell)
 
 `Windows` · `Android` · `Linux`
 
