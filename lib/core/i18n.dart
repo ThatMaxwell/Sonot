@@ -58,7 +58,7 @@ const _en = <String, dynamic>{
   'f.fin.avail': 'Free on Windows · Linux · Android',
 
   // Nav
-  'nav': ['Desktop', 'Mobile', 'Talents', 'People', 'Try it'],
+  'nav': ['Desktop', 'Mobile', 'Talents', 'buds', 'Code', 'People', 'Try it'],
   'download': 'Download',
 
   // Hero
@@ -233,6 +233,33 @@ const _en = <String, dynamic>{
     ],
   ],
 
+  // buds + Sonot Code
+  'soon': 'Coming soon',
+  'buds.by': 'BY SONOT',
+  'buds.t': 'Helpers with a *face.*',
+  'buds.sub': 'Give a bud a job and it gets to work: planning your day, digging into research, keeping an eye on your code, or just talking things through. Every note it keeps is right there for you to read, edit or delete.',
+  'buds.jobs': ['Your day: plans, reminders and a daily brief.', 'Researches anything and keeps watching it.', 'Keeps your repos healthy and helps with code.', 'Winding down: journaling and calm chat.'],
+  'buds.feats': [
+    ['Memory you can see', 'Every note a bud keeps is visible, editable and deletable, one at a time.', false],
+    ['Its own cloud computer', 'A browser, files and a terminal that keep working while your devices sleep.', true],
+    ['Routines', 'Morning briefs, price watches and reminders that run on their own.', true],
+  ],
+  'code.t': 'The agent for *real code.*',
+  'code.sub': 'Sonot Code is the darker, serious side of Sonot. It runs commands, works with Node.js and your files, drives a real browser and talks to GitHub, and it asks before anything risky.',
+  'code.caps': ['Terminal', 'Node.js', 'Files', 'Browser', 'GitHub'],
+  'code.tabs': ['Agent', 'Terminal', 'Browser'],
+  'code.run': [
+    ['you', 'Fix the failing test and open a PR'],
+    ['step', 'Reading the repo'],
+    ['cmd', 'npm test'],
+    ['err', '✗ 1 failed · parseDate handles time zones'],
+    ['step', 'Editing src/date.ts'],
+    ['cmd', 'npm test'],
+    ['ok', '✓ 42 passed'],
+    ['ask', 'Push the branch and open a pull request?'],
+    ['ok', '✓ Pull request opened'],
+  ],
+
   // Download + footer
   'dl.t': 'Get *Sonot.*',
   'dl.sub': 'Free to start. Yours in under a minute.',
@@ -294,7 +321,7 @@ const _pt = <String, dynamic>{
   'f.fin.by': 'Feito por ThatMaxwell',
   'f.fin.avail': 'Grátis no Windows · Linux · Android',
 
-  'nav': ['Computador', 'Celular', 'Talentos', 'Pessoas', 'Experimente'],
+  'nav': ['Computador', 'Celular', 'Talentos', 'buds', 'Code', 'Pessoas', 'Experimente'],
   'download': 'Baixar',
 
   'hero.eyebrow': 'O Sonot 1.0 chegou',
@@ -477,6 +504,33 @@ const _pt = <String, dynamic>{
       'li:**Escalador** — termine com tudo',
       'p:6 exercícios × 1 min × 3 rodadas = 18 min, mais 2 de alongamento. Você consegue.',
     ],
+  ],
+
+  // buds + Sonot Code
+  'soon': 'Em breve',
+  'buds.by': 'DA SONOT',
+  'buds.t': 'Ajudantes com *rosto.*',
+  'buds.sub': 'Dê um trabalho a um bud e ele começa na hora: planejar o seu dia, mergulhar numa pesquisa, ficar de olho no seu código ou só conversar. Cada anotação que ele guarda fica à vista para você ler, editar ou apagar.',
+  'buds.jobs': ['Seu dia: planos, lembretes e um resumo diário.', 'Pesquisa qualquer coisa e continua de olho.', 'Cuida dos seus repositórios e ajuda no código.', 'Pra desacelerar: diário e conversa tranquila.'],
+  'buds.feats': [
+    ['Memória à vista', 'Cada anotação de um bud pode ser vista, editada e apagada, uma por uma.', false],
+    ['Um computador na nuvem', 'Navegador, arquivos e terminal que seguem trabalhando enquanto seus aparelhos dormem.', true],
+    ['Rotinas', 'Resumos matinais, alertas de preço e lembretes que rodam sozinhos.', true],
+  ],
+  'code.t': 'O agente para *código de verdade.*',
+  'code.sub': 'O Sonot Code é o lado mais escuro e sério do Sonot. Ele roda comandos, trabalha com Node.js e seus arquivos, usa um navegador de verdade e conversa com o GitHub, e pergunta antes de qualquer coisa arriscada.',
+  'code.caps': ['Terminal', 'Node.js', 'Arquivos', 'Navegador', 'GitHub'],
+  'code.tabs': ['Agente', 'Terminal', 'Navegador'],
+  'code.run': [
+    ['you', 'Conserte o teste que falha e abra um PR'],
+    ['step', 'Lendo o repositório'],
+    ['cmd', 'npm test'],
+    ['err', '✗ 1 falhou · parseDate lida com fusos horários'],
+    ['step', 'Editando src/date.ts'],
+    ['cmd', 'npm test'],
+    ['ok', '✓ 42 passaram'],
+    ['ask', 'Enviar a branch e abrir um pull request?'],
+    ['ok', '✓ Pull request aberto'],
   ],
 
   'dl.t': 'Baixe o *Sonot.*',

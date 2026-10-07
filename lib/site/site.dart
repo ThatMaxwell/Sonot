@@ -11,6 +11,7 @@ import '../widgets/bloom.dart';
 import '../widgets/motion.dart';
 import 'common.dart';
 import 'desktop.dart';
+import 'family.dart';
 import 'people_try.dart';
 import 'phones.dart';
 import 'talents.dart';
@@ -32,7 +33,7 @@ class _SiteState extends State<Site> {
   final peopleP = ValueNotifier<double>(0);
   final dlP = ValueNotifier<double>(0);
   final pageP = ValueNotifier<double>(0);
-  final keys = List.generate(6, (_) => GlobalKey());
+  final keys = List.generate(8, (_) => GlobalKey());
 
   @override
   void initState() {
@@ -102,8 +103,10 @@ class _SiteState extends State<Site> {
                       ),
                     ),
                     KeyedSubtree(key: keys[2], child: const Talents()),
+                    KeyedSubtree(key: keys[3], child: const BudsShowcase()),
+                    KeyedSubtree(key: keys[4], child: const CodeShowcase()),
                     KeyedSubtree(
-                      key: keys[3],
+                      key: keys[5],
                       child: Pin(
                         height: vh * 1.2 + peopleTrackShift(context),
                         viewport: vh,
@@ -111,9 +114,9 @@ class _SiteState extends State<Site> {
                         child: RepaintBoundary(child: People(progress: peopleP)),
                       ),
                     ),
-                    KeyedSubtree(key: keys[4], child: const TryIt()),
+                    KeyedSubtree(key: keys[6], child: const TryIt()),
                     KeyedSubtree(
-                      key: keys[5],
+                      key: keys[7],
                       child: _Download(revealed: widget.revealed, progress: dlP),
                     ),
                     _Footer(onReplay: widget.onReplay),
@@ -197,7 +200,7 @@ class _Nav extends StatelessWidget {
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(color: h ? C.mist : const Color(0x00FFFFFF), borderRadius: BorderRadius.circular(20)),
-                                child: Text(items[i], style: sans(14.5, c: h ? C.ink : C.ink2)),
+                                child: Text(items[i], style: items[i] == 'buds' ? budsStyle(16, c: h ? C.ink : C.ink2) : sans(14.5, c: h ? C.ink : C.ink2)),
                               ),
                             ),
                         const Spacer(),
@@ -222,7 +225,7 @@ class _Nav extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Btn(label: t('download'), onTap: () => onJump(5)),
+                        Btn(label: t('download'), onTap: () => onJump(7)),
                       ],
                     ),
                   ),
@@ -691,7 +694,7 @@ class _Family extends StatelessWidget {
             pill(
               Text(
                 'buds',
-                style: TextStyle(fontFamily: F.toy, fontSize: 20, height: 1.05, color: C.white, fontVariations: const [FontVariation('wght', 600)]),
+                style: budsStyle(20, c: C.white),
               ),
             ),
             pill(Text('Sonot Code', style: word)),
