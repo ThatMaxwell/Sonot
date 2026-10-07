@@ -32,6 +32,8 @@ Phones can't run a browser for the agent, so Sonot Code on Android sends browser
 | `CUA_CLIENT_ID` + `CUA_CLIENT_SECRET` (or `SONOT_CUA=1` after `cua auth login`) | the browser runs on a [cua.ai](https://cua.ai) cloud computer. Without them it runs headless on this machine. |
 | `SONOT_BROWSER_NO_SANDBOX=1` | needed when the server runs as root (Docker). |
 
-One helper (and one cloud computer) is shared by everyone using this server, so keep it to people you trust.
+People can also bring their own cua.ai account: the app sends it as `X-Cua-Api-Key` (`client_id:client_secret`, or a Fleet token). Each key gets a helper process of its own, so keys and computers never mix, and keys are never logged. `GET /health` says `cloud: true` when the server has Cua credentials of its own.
+
+The server's own helper (and its cloud computers) is shared by everyone using this server, so keep it to people you trust.
 
 API: `POST /v1/chat` with `{mode, model, effort, messages}` returns Server-Sent Events (`delta`, then `done` or `error`). `GET /health` for a check. Needs Node 22.18+ (runs the TypeScript directly).

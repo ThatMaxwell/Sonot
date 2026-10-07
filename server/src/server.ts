@@ -21,7 +21,7 @@
  */
 import http from "node:http";
 import Anthropic from "@anthropic-ai/sdk";
-import { browserMode, handleBrowser, handleComputer } from "./browser.ts";
+import { browserMode, handleBrowser, handleComputer, hasCloud } from "./browser.ts";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -92,7 +92,7 @@ function sendJson(res: http.ServerResponse, status: number, payload: unknown) {
 
 const cors = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "authorization, content-type",
+  "access-control-allow-headers": "authorization, content-type, x-cua-api-key",
   "access-control-allow-methods": "GET, POST, OPTIONS",
 };
 
@@ -200,7 +200,7 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
   if (req.method === "GET" && url.pathname === "/health") {
-    return sendJson(res, 200, { ok: true, model: MODEL });
+    return sendJson(res, 200, { ok: true, model: MODEL, cloud: hasCloud() });
   }
   if (req.method === "POST" && url.pathname === "/v1/chat") {
     if (!authorized(req)) return sendJson(res, 401, { error: "Missing or wrong app token." });
@@ -224,7 +224,7 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && url.pathname === "/v1/computer") {
     if (!authorized(req)) return sendJson(res, 401, { error: "Missing or wrong app token." });
     readBody(req)
-      .then((raw) => handleComputer(res, JSON.parse(raw), cors))
+      .then((raw) => handleComputer(req, res, JSON.parse(raw), cors))
       .catch((e) => {
         if (!res.headersSent) sendJson(res, 400, { error: e instanceof SyntaxError ? "Invalid JSON." : String((e as Error).message) });
         else res.end();

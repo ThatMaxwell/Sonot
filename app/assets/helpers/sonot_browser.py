@@ -228,7 +228,9 @@ class CloudComputer:
                 raise RuntimeError("cua-sandbox is not installed on this server.") from e
             await say("Starting its cloud computer")
             # create() reattaches to a running computer with the same name.
-            self.sb = await Sandbox.create(Image.linux(), name=self.name, on="cloud", keep_alive_minutes=KEEP_ALIVE_MIN)
+            self.sb = await Sandbox.create(
+                Image.linux(), name=self.name, on="cloud", keep_alive_minutes=KEEP_ALIVE_MIN, time_to_start=600
+            )
             return self.sb
 
     async def browser_url(self, say) -> str:
